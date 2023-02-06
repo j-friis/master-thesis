@@ -1,0 +1,17 @@
+jupyter
+
+matplotlib
+
+# Standard libraries
+numpy
+pandas
+
+# ml standard libraries
+scikit-learn
+scipy
+
+# for lidar .laz files
+laspy
+
+#for visualizations of the pointclouds in python
+open3d
