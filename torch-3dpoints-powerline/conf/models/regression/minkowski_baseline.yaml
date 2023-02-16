@@ -1,0 +1,220 @@
+# @package models
+# Minkowski Engine: https://github.com/StanfordVL/MinkowskiEngine/blob/master/examples/minkunet.py
+
+ResNet14:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResNet14_"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+ResNet18:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResNet18_"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+ResNet34:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResNet34_"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+ResNet50:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResNet50_"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+ResNet101:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResNet101_"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+
+SENet14:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SENet14"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+SENet18:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SENet18"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+SENet34:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SENet34"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+SENet50:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SENet50"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+SENet101:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SENet101"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+SENet14Stats:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SENet14"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: True
+  loss_fn: smoothl1
+
+SENet18Stats:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SENet18"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: True
+  loss_fn: smoothl1
+
+SENet34Stats:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SENet34"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: True
+  loss_fn: smoothl1
+
+SENet50Stats:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SENet50"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: True
+  loss_fn: smoothl1
+
+SENet101Stats:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SENet101"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: True
+  loss_fn: smoothl1
+
+
+ExpSENet14:
+  class: minkowski.Minkowski_Exponential_Model
+  conv_type: "SPARSE"
+  model_name: "SENet14"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+ExpSENet50:
+  class: minkowski.Minkowski_Exponential_Model
+  conv_type: "SPARSE"
+  model_name: "SENet50"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1
+
+ExpSENet101:
+  class: minkowski.Minkowski_Exponential_Model
+  conv_type: "SPARSE"
+  model_name: "SENet101"
+  D: 3
+  activation: "relu"
+  first_stride: 2
+  dropout: 0
+  global_pool: mean
+  statpooling: False
+  loss_fn: smoothl1

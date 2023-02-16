@@ -1,0 +1,13 @@
+models:
+    PointAtt:
+        class: pointatt.PointAtt
+        conv_type: "PARTIAL_DENSE"
+        input_nc: FEAT + 3
+        hidden_dims: [32, 64, 128, 256, 512]
+        n_classes: N_CLS
+    UPointAtt:
+        class: pointatt.UPointAtt
+        conv_type: "PARTIAL_DENSE"
+        input_nc: FEAT + 3
+        hidden_dims: [32, 64, 128, 256, 512, 1024]
+        n_classes: N_CLS

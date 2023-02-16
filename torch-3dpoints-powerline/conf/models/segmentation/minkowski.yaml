@@ -1,0 +1,242 @@
+# @package models
+# Minkowski Engine: https://github.com/StanfordVL/MinkowskiEngine/blob/master/examples/minkunet.py
+ResUNet14:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResUNet14_"
+  D: 3
+  statpooling: False
+  activation: relu
+
+ResUNet18:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResUNet18_"
+  D: 3
+  statpooling: False
+  activation: relu
+
+ResUNet34:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResUNet34_"
+  D: 3
+  statpooling: False
+  activation: relu
+
+ResUNet50:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResUNet50_"
+  D: 3
+  statpooling: False
+  activation: relu
+
+ResUNet101:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResUNet101_"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet14:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet14"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet18:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet18"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet34:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet34"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet50:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet50"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet101:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet101"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet14Stats:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet14"
+  D: 3
+  statpooling: True
+  activation: relu
+
+SEUNet18Stats:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet18"
+  D: 3
+  statpooling: True
+  activation: relu
+
+SEUNet34Stats:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet34"
+  D: 3
+  statpooling: True
+  activation: relu
+
+SEUNet50Stats:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet50"
+  D: 3
+  statpooling: True
+  activation: relu
+
+SEUNet101Stats:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet101"
+  D: 3
+  statpooling: True
+  activation: relu
+
+
+ResUNet14_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResUNet14_2UP"
+  D: 3
+  statpooling: False
+  activation: relu
+
+ResUNet18_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResUNet18_2UP"
+  D: 3
+  statpooling: False
+  activation: relu
+
+ResUNet34_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResUNet34_2UP"
+  D: 3
+  statpooling: False
+  activation: relu
+
+ResUNet50_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResUNet50_2UP"
+  D: 3
+  statpooling: False
+  activation: relu
+
+ResUNet101_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "ResUNet101_2UP"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet14_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet14_2UP"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet18_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet18_2UP"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet34_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet34_2UP"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet50_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet50_2UP"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet101_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet101_2UP"
+  D: 3
+  statpooling: False
+  activation: relu
+
+SEUNet14Stats_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet14_2UP"
+  D: 3
+  statpooling: True
+  activation: relu
+
+SEUNet18Stats_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet18_2UP"
+  D: 3
+  statpooling: True
+  activation: relu
+
+SEUNet34Stats_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet34_2UP"
+  D: 3
+  statpooling: True
+  activation: relu
+
+SEUNet50Stats_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet50_2UP"
+  D: 3
+  statpooling: True
+  activation: relu
+
+SEUNet101Stats_2UP:
+  class: minkowski.Minkowski_Baseline_Model
+  conv_type: "SPARSE"
+  model_name: "SEUNet101_2UP"
+  D: 3
+  statpooling: True
+  activation: relu
