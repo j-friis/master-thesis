@@ -5,7 +5,7 @@
 First create a conda environment
 
 ```bash
-conda create --name $name python=3.10
+conda create --name $name python=3.8
 ```
 
 Activate the environment
