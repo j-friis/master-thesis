@@ -153,4 +153,6 @@ cython_debug/
 
 *.zip
 *.laz
+torch-3dpoints-powerline/outputs/*
+torch-3dpoints-powerline/data/*
 *.las
