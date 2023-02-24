@@ -15,7 +15,7 @@ json = """
     },
     {
         "type":"writers.las",
-        "filename":"%s_hag_delaunay.las",
+        "filename":"%s_hag_delaunay.laz",
         "extra_dims":"HeightAboveGround=float32",
         "compression":"laszip"
     }
