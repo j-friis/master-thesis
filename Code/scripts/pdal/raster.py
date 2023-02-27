@@ -72,13 +72,6 @@ if __name__ == "__main__":
                 "output_type":"max",
                 "gdaldriver":"GTiff",
                 "resolution":0.08
-            },
-            {
-                "type":"writers.gdal",
-                "filename":"%s_idw.tif",
-                "output_type":"idw",
-                "gdaldriver":"GTiff",
-                "resolution":0.08
             }
         ]
         """ % (file_name, out_file, out_file)
