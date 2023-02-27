@@ -74,6 +74,6 @@ if __name__ == "__main__":
                 "resolution":0.08
             }
         ]
-        """ % (file_name, out_file, out_file)
+        """ % (file_name, out_file)
         pipeline = pdal.Pipeline(json)
         count = pipeline.execute()
