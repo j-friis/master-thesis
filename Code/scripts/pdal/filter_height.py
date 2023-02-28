@@ -4,13 +4,14 @@ import os
 import laspy
 from os import listdir
 from os.path import isfile, join
+from tqdm import tqdm
 
 def filter_height(dir: str):
 
     onlyfiles = [f for f in listdir(dir) if isfile(join(dir, f)) and "_hag_delaunay" in f and "max" not in f]
     print(onlyfiles)
 
-    for file in onlyfiles:
+    for file in tqdm(onlyfiles):
         file_name = file
         file_name = join(dir, file_name)
 
@@ -25,8 +26,8 @@ def filter_height(dir: str):
         
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Convert Laz to tif.')
-    parser.add_argument('folder', type=str, help='folder to convert files')
+    parser = argparse.ArgumentParser(description='Filter the height in laz files.')
+    parser.add_argument('folder', type=str, help='Folder with files to filter')
 
     args = parser.parse_args()
     dir = args.folder

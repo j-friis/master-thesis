@@ -2,13 +2,14 @@ import argparse
 import pdal
 from os import listdir
 from os.path import isfile, join
+from tqdm import tqdm
 
 
 def rasterize(dir: str):
     onlyfiles = [f for f in listdir(dir) if isfile(join(dir, f)) and "_height_filtered" in f]
     print(onlyfiles)
 
-    for file in onlyfiles:
+    for file in tqdm(onlyfiles):
         file_name = file
         file_name = join(dir, file_name)
         out_file = file_name.split(".")[0]
@@ -49,7 +50,7 @@ def rasterize(dir: str):
                 "filename":"%s_max.tif",
                 "output_type":"max",
                 "gdaldriver":"GTiff",
-                "resolution":0.1
+                "resolution":0.08
             }
         ]
         """ % (file_name, out_file)
@@ -58,8 +59,8 @@ def rasterize(dir: str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Convert Laz to tif.')
-    parser.add_argument('folder', type=str, help='folder to convert files')
+    parser = argparse.ArgumentParser(description='Rasterize the laz files.')
+    parser.add_argument('folder', type=str, help='Folder with files to convert')
 
     args = parser.parse_args()
     dir = args.folder
