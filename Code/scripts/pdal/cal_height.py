@@ -3,11 +3,7 @@ import pdal
 import os
 from os import listdir
 from os.path import isfile, join
-parser = argparse.ArgumentParser(description='Convert Laz to tif.')
-parser.add_argument('folder', type=str, help='folder to convert files')
 
-args = parser.parse_args()
-dir = args.folder
 # out_file = file_name.split(".")[0]
 
 # json = """
@@ -25,8 +21,7 @@ dir = args.folder
 # ]
 # """ % (file_name, out_file)
 
-if __name__ == "__main__":
-
+def cal_height(dir: str):
     onlyfiles = [f for f in listdir(dir) if isfile(join(dir, f)) and "_hag_delaunay" not in f]
     print(onlyfiles)
 
@@ -51,3 +46,11 @@ if __name__ == "__main__":
         """ % (file_name, out_file)
         pipeline = pdal.Pipeline(json)
         count = pipeline.execute()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Convert Laz to tif.')
+    parser.add_argument('folder', type=str, help='folder to convert files')
+
+    args = parser.parse_args()
+    dir = args.folder
+    cal_height(dir)
