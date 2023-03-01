@@ -5,7 +5,6 @@ from os import listdir
 from os.path import isfile, join
 from tqdm import tqdm
 from multiprocessing import Pool
-from tqdm.contrib.concurrent import process_map
 
 # out_file = file_name.split(".")[0]
 
@@ -46,6 +45,7 @@ def pipeline(in_file: str):
     """ % (file_name, out_file)
     pipeline = pdal.Pipeline(json)
     count = pipeline.execute()
+    return f"Done with {file_name}"
 
 
 def cal_height(dir: str):
@@ -53,10 +53,15 @@ def cal_height(dir: str):
                     and "_hag" not in f and ".tif" not in f and "height" not in f]
     print(onlyfiles)
 
-    process_map(pipeline, onlyfiles, max_workers=5)
-
-    # with Pool(3) as p:
-    #     p.map(pipeline, onlyfiles)
+    with Pool(3) as p:
+        results = tqdm(
+            p.imap_unordered(pipeline, onlyfiles),
+            total=len(onlyfiles),
+        )  # 'total' is redundant here but can be useful
+        # when the size of the iterable is unobvious
+        #p.map(pipeline, onlyfiles)
+        for result in results:
+            print(result)
 
 
     # for file in tqdm(onlyfiles):
