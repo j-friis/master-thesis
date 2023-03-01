@@ -6,6 +6,9 @@ from os.path import isfile, join
 from tqdm import tqdm
 from multiprocessing import Pool
 
+
+MAX_WORKERS = 3
+
 # out_file = file_name.split(".")[0]
 
 # json = """
@@ -53,7 +56,7 @@ def cal_height(dir: str):
                     and "_hag" not in f and ".tif" not in f and "height" not in f]
     print(onlyfiles)
 
-    with Pool(3) as p:
+    with Pool(MAX_WORKERS) as p:
         results = tqdm(
             p.imap_unordered(pipeline, onlyfiles),
             total=len(onlyfiles),
