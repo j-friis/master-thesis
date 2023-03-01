@@ -3,59 +3,95 @@ import pdal
 from os import listdir
 from os.path import isfile, join
 from tqdm import tqdm
+from multiprocessing import Pool
+
+from PDAL_CONSTANTS import MAX_WORKERS
+
+def worker(in_file: str):
+    file_name = join(dir, in_file)
+    out_file = file_name.split(".")[0]
+    out_file = join(dir, out_file)
+
+    json = """
+    [
+        "%s",
+        {
+            "type":"writers.gdal",
+            "filename":"%s_max.tif",
+            "output_type":"max",
+            "gdaldriver":"GTiff",
+            "resolution":0.08
+        }
+    ]
+    """ % (file_name, out_file)
+    pipeline = pdal.Pipeline(json)
+    count = pipeline.execute()
+
+    return f"Done with {in_file}"
+
 
 
 def rasterize(dir: str):
     onlyfiles = [f for f in listdir(dir) if isfile(join(dir, f)) and "_height_filtered" in f]
     print(onlyfiles)
 
-    for file in tqdm(onlyfiles):
-        file_name = file
-        file_name = join(dir, file_name)
-        out_file = file_name.split(".")[0]
-        out_file = join(dir, out_file)
-        
-        # json = """
-        # [
-        #     "%s",
-        #     {
-        #         "type":"writers.gdal",
-        #         "filename":"%s_min.tif",
-        #         "output_type":"min",
-        #         "gdaldriver":"GTiff",
-        #         "resolution":0.08
-        #     },
-        #     {
-        #         "type":"writers.gdal",
-        #         "filename":"%s_max.tif",
-        #         "output_type":"max",
-        #         "gdaldriver":"GTiff",
-        #         "resolution":0.08
-        #     },
-        #     {
-        #         "type":"writers.gdal",
-        #         "filename":"%s_idw.tif",
-        #         "output_type":"idw",
-        #         "gdaldriver":"GTiff",
-        #         "resolution":0.08
-        #     }
-        # ]
-        # """ % (file_name, out_file, out_file, out_file)
+    with Pool(MAX_WORKERS) as p:
+        results = tqdm(
+            p.imap_unordered(worker, onlyfiles),
+            total=len(onlyfiles),
+        )  # 'total' is redundant here but can be useful
+        # when the size of the iterable is unobvious
+        #p.map(pipeline, onlyfiles)
+        for result in results:
+            print(result)
 
-        json = """
-        [
-            "%s",
-            {
-                "type":"writers.gdal",
-                "filename":"%s_max.tif",
-                "output_type":"max",
-                "gdaldriver":"GTiff",
-                "resolution":0.08
-            }
-        ]
-        """ % (file_name, out_file)
-        pipeline = pdal.Pipeline(json)
-        count = pipeline.execute()
+    # for file in tqdm(onlyfiles):
+    #     file_name = file
+    #     file_name = join(dir, file_name)
+    #     out_file = file_name.split(".")[0]
+    #     out_file = join(dir, out_file)
+        
+    #     # json = """
+    #     # [
+    #     #     "%s",
+    #     #     {
+    #     #         "type":"writers.gdal",
+    #     #         "filename":"%s_min.tif",
+    #     #         "output_type":"min",
+    #     #         "gdaldriver":"GTiff",
+    #     #         "resolution":0.08
+    #     #     },
+    #     #     {
+    #     #         "type":"writers.gdal",
+    #     #         "filename":"%s_max.tif",
+    #     #         "output_type":"max",
+    #     #         "gdaldriver":"GTiff",
+    #     #         "resolution":0.08
+    #     #     },
+    #     #     {
+    #     #         "type":"writers.gdal",
+    #     #         "filename":"%s_idw.tif",
+    #     #         "output_type":"idw",
+    #     #         "gdaldriver":"GTiff",
+    #     #         "resolution":0.08
+    #     #     }
+    #     # ]
+    #     # """ % (file_name, out_file, out_file, out_file)
+
+    #     json = """
+    #     [
+    #         "%s",
+    #         {
+    #             "type":"writers.gdal",
+    #             "filename":"%s_max.tif",
+    #             "output_type":"max",
+    #             "gdaldriver":"GTiff",
+    #             "resolution":0.08
+    #         }
+    #     ]
+    #     """ % (file_name, out_file)
+    #     pipeline = pdal.Pipeline(json)
+    #     count = pipeline.execute()
 
 
 if __name__ == "__main__":

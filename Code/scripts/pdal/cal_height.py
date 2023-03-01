@@ -6,8 +6,8 @@ from os.path import isfile, join
 from tqdm import tqdm
 from multiprocessing import Pool
 
+from PDAL_CONSTANTS import MAX_WORKERS
 
-MAX_WORKERS = 3
 
 # out_file = file_name.split(".")[0]
 
@@ -26,8 +26,7 @@ MAX_WORKERS = 3
 # ]
 # """ % (file_name, out_file)
 
-def pipeline(in_file: str):
-    print(in_file)
+def worker(in_file: str):
     file_name = in_file
     file_name = join(dir, file_name)
     out_file = file_name.split(".")[0]
@@ -48,7 +47,7 @@ def pipeline(in_file: str):
     """ % (file_name, out_file)
     pipeline = pdal.Pipeline(json)
     count = pipeline.execute()
-    return f"Done with {file_name}"
+    return f"Done with {in_file}"
 
 
 def cal_height(dir: str):
@@ -58,11 +57,11 @@ def cal_height(dir: str):
 
     with Pool(MAX_WORKERS) as p:
         results = tqdm(
-            p.imap_unordered(pipeline, onlyfiles),
+            p.imap_unordered(worker, onlyfiles),
             total=len(onlyfiles),
         )  # 'total' is redundant here but can be useful
         # when the size of the iterable is unobvious
-        #p.map(pipeline, onlyfiles)
+        #p.map(worker, onlyfiles)
         for result in results:
             print(result)
 
