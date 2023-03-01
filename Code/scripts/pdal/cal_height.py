@@ -3,7 +3,7 @@ import pdal
 import os
 from os import listdir
 from os.path import isfile, join
-from tqdm import tqdm
+#from tqdm import tqdm
 from multiprocessing import Pool
 
 from PDAL_CONSTANTS import MAX_WORKERS
@@ -48,7 +48,7 @@ def worker(in_file: str):
     count = pipeline.execute()
 
     file_name = in_file.split('/')[-1]
-
+    print(f"Done with {file_name}")
     return f"Done with {file_name}"
 
 
@@ -59,14 +59,16 @@ def cal_height(dir: str):
     onlyfiles = [join(dir, f) for f in onlyfiles]
 
     with Pool(MAX_WORKERS) as p:
-        results = tqdm(
-            p.imap_unordered(worker, onlyfiles),
-            total=len(onlyfiles),
-        )  # 'total' is redundant here but can be useful
+        p.map(worker, onlyfiles)
+
+        # results = tqdm(
+        #     p.imap_unordered(worker, onlyfiles),
+        #     total=len(onlyfiles),
+        # )  # 'total' is redundant here but can be useful
         # when the size of the iterable is unobvious
         #p.map(worker, onlyfiles)
-        for result in results:
-            print(result)
+        # for result in results:
+        #     print(result)
         
         p.close()
         p.join()
@@ -93,6 +95,8 @@ def cal_height(dir: str):
     #     """ % (file_name, out_file)
     #     pipeline = pdal.Pipeline(json)
     #     count = pipeline.execute()
+
+    return 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Calculate the height from the ground.')

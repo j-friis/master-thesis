@@ -4,7 +4,7 @@ import os
 import laspy
 from os import listdir
 from os.path import isfile, join
-from tqdm import tqdm
+#from tqdm import tqdm
 from multiprocessing import Pool
 
 from PDAL_CONSTANTS import MAX_WORKERS
@@ -36,16 +36,15 @@ def filter_height(dir: str):
 
 
     with Pool(MAX_WORKERS) as p:
-        results = tqdm(
-            p.imap_unordered(worker, onlyfiles),
-            total=len(onlyfiles),
-        )  # 'total' is redundant here but can be useful
+        # results = tqdm(
+        #     p.imap_unordered(worker, onlyfiles),
+        #     total=len(onlyfiles),
+        # )  # 'total' is redundant here but can be useful
         # when the size of the iterable is unobvious
-        #p.map(pipeline, onlyfiles)
-        for result in results:
-            print(result)
-        p.close()
-        p.join()
+        p.map(worker, onlyfiles)
+        # for result in results:
+        #     print(result)
+
     # for file in tqdm(onlyfiles):
     #     file_name = file
     #     file_name = join(dir, file_name)
