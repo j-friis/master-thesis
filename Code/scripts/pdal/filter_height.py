@@ -11,24 +11,29 @@ from PDAL_CONSTANTS import MAX_WORKERS
 
 def worker(in_file: str):
 
-    file_name = join(dir, file_name)
+    out_filename = in_file.split(".")[0]
 
-    out_filename = file_name.split(".")[0]
     out_filename = out_filename.replace("_hag_delaunay",'')
+    out_filename = out_filename.replace("_hag_nn",'')
     out_filename = f"{out_filename}_height_filtered.laz"
-    out_file = join(dir, out_filename)
     
-    pdal_data = laspy.read(file_name, laz_backend=laspy.compression.LazBackend.LazrsParallel)
+    pdal_data = laspy.read(in_file, laz_backend=laspy.compression.LazBackend.LazrsParallel)
     pdal_data = pdal_data[pdal_data.HeightAboveGround>3 ]
-    pdal_data.write(out_file, do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
+    pdal_data.write(out_filename, do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
 
-    return f"Done with {in_file}"
+    file_name = in_file.split('/')[-1]
+    file_name = file_name.split("_height_filtered",1)[0]
+
+    return f"Done with {file_name}"
+
 
 
 def filter_height(dir: str):
 
-    onlyfiles = [f for f in listdir(dir) if isfile(join(dir, f)) and "_hag_delaunay" in f and "max" not in f]
+    onlyfiles = [f for f in listdir(dir) if isfile(join(dir, f)) and "_hag" in f and ".tif" not in f]
     print(onlyfiles)
+    onlyfiles = [join(dir, f) for f in onlyfiles]
+
 
     with Pool(MAX_WORKERS) as p:
         results = tqdm(
@@ -39,7 +44,8 @@ def filter_height(dir: str):
         #p.map(pipeline, onlyfiles)
         for result in results:
             print(result)
-
+        p.close()
+        p.join()
     # for file in tqdm(onlyfiles):
     #     file_name = file
     #     file_name = join(dir, file_name)
