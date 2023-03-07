@@ -1,10 +1,7 @@
 import argparse
-import pdal
-import os
 import laspy
 from os import listdir
 from os.path import isfile, join
-#from tqdm import tqdm
 from multiprocessing import Pool
 
 from PDAL_CONSTANTS import MAX_WORKERS
