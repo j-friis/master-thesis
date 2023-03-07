@@ -1,0 +1,2 @@
+python run_pipeline.py /home/jf/Downloads/WingDownload
+~/Documents/msc/Code/scripts/pdal
