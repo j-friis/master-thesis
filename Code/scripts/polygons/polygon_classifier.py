@@ -321,15 +321,10 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
 
         return self
 
-    def predict(self, X: str):
-
-        closest = np.argmin(euclidean_distances(X, self.X_), axis=1)
-        return self.y_[closest]
-    
     def score(self, _, __):
         _, laz_point_cloud_paths = self.GetPathRelations()
 
-
+        #return 0
         pct_lost_datapoints_list = []
         pct_lost_powerline_list = []
         for i, laz_file in enumerate(laz_point_cloud_paths):
@@ -348,11 +343,36 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
             pct_lost_datapoints = 1-(new_amount_points/amount_points)
             pct_lost_powerline_list.append(pct_lost_datapoints)
             print("Done")
-        if np.mean(pct_lost_powerline_list) > 0.001:
+        if np.mean(pct_lost_powerline_list) > 0.01:
             return 0
         else:
             return np.mean(pct_lost_datapoints_list)
         
+def GenPath(path):
+        if path[-1] == '/':
+            return path
+        else:
+            return path+'/'
+
+def GetPathRelations(path):
+    full_path_to_data = GenPath(path)
+    
+    ground_removed_image_paths = []
+    laz_point_cloud_paths = []
+    
+    # Find full path to all images
+    for path in glob.glob(full_path_to_data+'ImagesGroundRemoved/*'):
+        ground_removed_image_paths.append(path)
+
+    # Find full path to all laz files
+    for path in glob.glob(full_path_to_data+'LazFilesWithHeightParam/*'):
+        laz_point_cloud_paths.append(path)
+        
+    ground_removed_image_paths.sort()
+    laz_point_cloud_paths.sort()
+    assert(len(ground_removed_image_paths)==len(laz_point_cloud_paths))
+    return ground_removed_image_paths, laz_point_cloud_paths
+
 
 if __name__ == "__main__":
 
@@ -365,28 +385,34 @@ if __name__ == "__main__":
     #         min_line_length=1,max_line_gap=1, closing_kernel_size=1,
     #         opening_kernel_size=1, meters_around_line=1, simplify_tolerance=1)
 
+    cv = [(slice(None), slice(None))]
     param = {
             "path": Categorical(["/home/jf/data/"]),
-            "canny_lower": [1],
-            "canny_upper": [1],
-            "hough_lines_treshold": [1],
-            "min_line_length": [1],
-            "max_line_gap": [1],
-            "closing_kernel_size": [1],
-            "opening_kernel_size": [1],
-            "meters_around_line": [1],
-            "simplify_tolerance": [1],
+            "canny_lower": Integer(3,50),
+            "canny_upper": Integer(80,200),
+            "hough_lines_treshold": Integer(3,15),
+            "min_line_length": Integer(1,5),
+            "max_line_gap": Integer(1,5),
+            "closing_kernel_size": Integer(1,10),
+            "opening_kernel_size": Integer(1,10),
+            "meters_around_line": Integer(1,3),
+            "simplify_tolerance": Integer(1,32),
     }
 
     opt = BayesSearchCV(
         TemplateClassifier(),search_spaces=param,
-        cv=2,
-        n_iter=1,
-        n_jobs=1,
+        cv=cv,
+        n_iter=5,
+        n_jobs=-1,
         random_state=0
     )
     # executes bayesian optimization
-    _ = opt.fit([[1,2],[1,2],[1,2],[1,2]], [1,2,1,2])
+    X = [[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2]]
+    Y = [1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2]
+    X = [[1,2],[1,2],[1,2],[1,2]]
+    Y = [1,2,1,2]
+    #X = GetPathRelations("/home/jf/data/")
+    _ = opt.fit(X,Y)
 
     # model can be saved, used for predictions or scoring
     print(opt.best_score_)
