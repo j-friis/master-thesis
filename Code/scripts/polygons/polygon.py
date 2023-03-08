@@ -135,14 +135,14 @@ def make_polygons(dilation_cirkular_kernel):
     simplified_all_multi_polygons =[]
     # Simplify all standard polygons
     for p in all_polygons:
-        simplified_all_polygons.append(shapely.simplify(p, tolerance=2, preserve_topology=True))
+        simplified_all_polygons.append(shapely.simplify(p, tolerance=32, preserve_topology=True))
     simplified_all_polygons  = [p for p in simplified_all_polygons if not p.is_empty]
 
     # Simplify all multi polygons
     for multi_pol in all_multi_polygons:
         tmp = []
         for p in multi_pol:
-            tmp.append(shapely.simplify(p, tolerance=2, preserve_topology=True))
+            tmp.append(shapely.simplify(p, tolerance=32, preserve_topology=True))
         tmp  = [p for p in tmp if not p.is_empty]
         simplified_all_multi_polygons.append(tmp)
 
@@ -276,6 +276,22 @@ def filter_polygons(reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_p
     new_point_cloud = point_cloud[indexes_needed]
     return new_point_cloud
 
+def viz_polygon(dilation_cirkular_kernel, reg_polygons, multi_polygons):
+    plt.figure()
+    plt.imshow(dilation_cirkular_kernel, cmap='gray')
+
+    for p in reg_polygons:
+        x = p.vertices[:,0]
+        y = p.vertices[:,1]
+        plt.scatter(x,y, s=0.01, color='red')
+
+    for multi_p in multi_polygons:
+        for p in multi_p:
+            x = p.vertices[:,0]
+            y = p.vertices[:,1]
+            plt.scatter(x,y, s=0.01, color='blue') 
+    plt.title("Plot of polygons")
+    plt.show()
 
 if __name__ == "__main__":
 
@@ -284,5 +300,10 @@ if __name__ == "__main__":
     dilation_cirkular_kernel, image = hough_lines(file+"_max.tif")
 
     reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, = make_polygons(dilation_cirkular_kernel)
+    viz_polygon(dilation_cirkular_kernel, reg_polygons, multi_polygons)
+    
     point_cloud = laspy.read(file+".laz", laz_backend=laspy.compression.LazBackend.LazrsParallel)
     new_point_cloud = filter_polygons(reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, point_cloud, image)
+    print("Amount of points in Point Cloud: ", len(point_cloud))
+    print("Amount of points in new Point Cloud: ", len(new_point_cloud))
+    print("Amount of points removed: ", len(point_cloud)-len(new_point_cloud))
