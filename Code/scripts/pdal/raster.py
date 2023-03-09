@@ -20,7 +20,7 @@ def worker(in_file: str):
             "filename":"%s_max.tif",
             "output_type":"max",
             "gdaldriver":"GTiff",
-            "resolution":0.08
+            "resolution":1.0
         }
     ]
     """ % (in_file, out_file)
