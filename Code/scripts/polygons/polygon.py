@@ -293,17 +293,32 @@ def viz_polygon(dilation_cirkular_kernel, reg_polygons, multi_polygons):
     plt.title("Plot of polygons")
     plt.show()
 
+def viz_cloud(point_cloud, new_point_cloud):
+    point_data = np.stack([point_cloud.X, point_cloud.Y, point_cloud.Z], axis=0).transpose((1, 0))
+    geom = o3d.geometry.PointCloud()
+    geom.points = o3d.utility.Vector3dVector(point_data)
+    o3d.visualization.draw_geometries([geom])
+
+    point_data = np.stack([new_point_cloud.X, new_point_cloud.Y, new_point_cloud.Z], axis=0).transpose((1, 0))
+    geom = o3d.geometry.PointCloud()
+    geom.points = o3d.utility.Vector3dVector(point_data)
+    o3d.visualization.draw_geometries([geom])
+    
+
 if __name__ == "__main__":
 
-    file = "/home/jf/Downloads/WingDownload/PUNKTSKY_00005_1km_6134_518"
+    file = "/home/jf/Downloads/WingDownload/PUNKTSKY_00005_1km_6161_465"
 
     dilation_cirkular_kernel, image = hough_lines(file+"_max.tif")
 
     reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, = make_polygons(dilation_cirkular_kernel)
-    viz_polygon(dilation_cirkular_kernel, reg_polygons, multi_polygons)
+    #viz_polygon(dilation_cirkular_kernel, reg_polygons, multi_polygons)
     
     point_cloud = laspy.read(file+".laz", laz_backend=laspy.compression.LazBackend.LazrsParallel)
     new_point_cloud = filter_polygons(reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, point_cloud, image)
     print("Amount of points in Point Cloud: ", len(point_cloud))
     print("Amount of points in new Point Cloud: ", len(new_point_cloud))
     print("Amount of points removed: ", len(point_cloud)-len(new_point_cloud))
+    print(f"There are {np.sum(point_cloud.classification == 14)} wire conductor points in the non transformed data")
+    print(f"There are {np.sum(new_point_cloud.classification == 14)} wire conductor points in the transformed data")
+    viz_cloud(point_cloud, new_point_cloud)
