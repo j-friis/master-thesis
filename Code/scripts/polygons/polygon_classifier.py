@@ -1,25 +1,16 @@
-import os
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
-from sklearn.utils.multiclass import unique_labels
-from sklearn.metrics import euclidean_distances
-
-import numpy as np
+import argparse
 import cv2
 import glob
 import laspy
-
 import rasterio
 from rasterio.features import shapes
-
 from shapely.geometry import Polygon, mapping
 import shapely
 from matplotlib.path import Path
-
 from skopt import BayesSearchCV
-from skopt.space import Real, Categorical, Integer
-from tqdm import tqdm
+from skopt.space import Categorical, Integer
 
 class TemplateClassifier(BaseEstimator, ClassifierMixin):
 
@@ -37,7 +28,6 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
         self.meters_around_line = meters_around_line
         self.simplify_tolerance = simplify_tolerance
         self.indexes_needed_list = []
-
 
     def GenPath(self, path):
         if path[-1] == '/':
@@ -66,19 +56,20 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
 
     def hough_lines(self, file: str):
 
+        # Create Image
         image = cv2.imread(file, cv2.IMREAD_UNCHANGED)
         image = np.where(image >= 0, image, 0)
         image = image/np.max(image)
-
         image = (image*255).astype(np.uint8)
 
-        #kernel = np.ones((70,70),np.uint8)
+        # Apply Closing
         closing_kernel = np.ones((self.closing_kernel_size,self.closing_kernel_size),np.uint8)
         closing = cv2.morphologyEx(image, cv2.MORPH_CLOSE, closing_kernel)
 
-        # Apply edge detection method on the image
+        # Apply Edge Detection
         edges = cv2.Canny(closing, self.canny_lower, self.canny_upper, None, 3)
 
+        # Apply HoughLinesP
         linesP = cv2.HoughLinesP(
             edges, # Input edge image
             1, # Distance resolution in pixels
@@ -87,44 +78,34 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
             minLineLength=self.min_line_length, # Min allowed length of line
             maxLineGap=self.max_line_gap # Max allowed gap between line for joining them
             )
-
         lines_image = np.zeros_like(edges)
-
         # Draw the lines
         if linesP is not None:
             for i in range(0, len(linesP)):
                 l = linesP[i][0]
                 cv2.line(lines_image, (l[0], l[1]), (l[2], l[3]), (255,0,0), 3)
 
-        #kernel = np.ones((5,5),np.uint8)
+        # Apply Opening
         opening_kernel = np.ones((self.opening_kernel_size,self.opening_kernel_size),np.uint8)
         opening = cv2.morphologyEx(lines_image, cv2.MORPH_OPEN, opening_kernel)
-        #dilation = cv2.dilate(lines_image, self.opening_kernel, iterations = 7)
-
 
         # Pixels per kilometer
         x_pixels, y_pixels = image.shape
-
         # Pixels per meter
         x_per_km_pixels, y_per_km_pixels = x_pixels/1000, y_pixels/1000
 
-        # Set kernel size to 1 meter around the each line
         kernel_size = int(self.meters_around_line*np.ceil(x_per_km_pixels))
-        # Create kernel
+
+        # # Apply Dilation and create a cirkular kernel using (image, center_coordinates, radius, color, thickness)
         circular_kernel = np.zeros((kernel_size, kernel_size), np.uint8)
-
-        # Create a cirkular kernel using (image, center_coordinates, radius, color, thickness)
         cv2.circle(circular_kernel, (int(kernel_size/2), int(kernel_size/2)), int(kernel_size/2), 255, -1)
-
-        # Perform dilation with the cirkular kernel
-        dilation_cirkular_kernel = cv2.dilate(opening, circular_kernel, iterations=3)
+        dilation_cirkular_kernel = cv2.dilate(opening, circular_kernel, iterations=1)
 
         return dilation_cirkular_kernel, image
 
 
     def make_polygons(self, dilation_cirkular_kernel):
         # Create Polygons and Multi Polygons
-
         mask = (dilation_cirkular_kernel == 255)
         output = rasterio.features.shapes(dilation_cirkular_kernel, mask=mask, connectivity=4)
         output_list = list(output)
@@ -132,8 +113,6 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
         # Seperate the Multipolygons and Polygons
         all_polygons = []
         all_multi_polygons =[]
-
-
 
         for multi_polygon in output_list:
             found_polygon = multi_polygon[0]['coordinates']
@@ -155,7 +134,6 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
                     new_list.append(pol)
             all_multi_polygons[i] = new_list
 
-            
         simplified_all_polygons = []
         simplified_all_multi_polygons =[]
         # Simplify all standard polygons
@@ -207,15 +185,19 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
             tmp = [Path(mapping(p)['coordinates'][0]) for p in multi_pol]
             simplified_all_multi_polygons_path.append(tmp)
 
-
-        print(f"Amount of polygons: {len(simplified_all_polygons_path)}")
-        print(f"Amount of multi polygons: {len(simplified_all_multi_polygons_path)}")
-
         return simplified_all_polygons_path, simplified_all_multi_polygons_path, bbox_all_polygon_path, bbox_all_multi_polygons_path
         
 
+    def MaxMinNormalize(self, arr):
+        return (arr - np.min(arr))/(np.max(arr)-np.min(arr))
+
+    def CastAllXValuesToImage(self, arr, x_pixels):
+        return self.MaxMinNormalize(arr)*x_pixels
+
+    def CastAllYValuesToImage(self, arr, y_pixels):
+        return (1-self.MaxMinNormalize(arr))*y_pixels
+
     def filter_polygons(self, reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, point_cloud, image):
-        
         # Pixels per kilometer
         x_pixels, y_pixels = image.shape
         x_values = self.CastAllXValuesToImage(point_cloud.X, x_pixels)
@@ -244,7 +226,6 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
             
             # Update the indexes
             indexes_needed[final_indexes] = 1
-            print("Progress in Polygons: ", i/len(reg_polygons))
 
         for i in range(len(multi_polygons)):
             tmp_indexes_needed = np.zeros(len(x_values), dtype=bool)
@@ -271,7 +252,6 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
             for j in range(1, len(bb_multi_pol)):
                 
                 # Get the bounding box of the temp multi polygon
-            
                 indexes_inside_box = bb_multi_pol[j].contains_points(list_zipped)
                 indexes_inside_box = np.array([index for index, x in enumerate(indexes_inside_box) if x])
                 
@@ -286,64 +266,53 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
                 tmp_indexes_not_needed[final_indexes] = 1
         
             indexes_needed = indexes_needed | (tmp_indexes_needed & np.invert(tmp_indexes_not_needed))
-            print("Progress in MultiPolygons: ", i/len(multi_polygons))
-
-
         return indexes_needed
 
-    def MaxMinNormalize(self, arr):
-        return (arr - np.min(arr))/(np.max(arr)-np.min(arr))
-
-    def CastAllXValuesToImage(self, arr, x_pixels):
-        return self.MaxMinNormalize(arr)*x_pixels
-
-    def CastAllYValuesToImage(self, arr, y_pixels):
-        return (1-self.MaxMinNormalize(arr))*y_pixels
-    
-
     def fit(self, X, y):
-
         ground_removed_image_paths, laz_point_cloud_paths = self.GetPathRelations()
-
         for tif, laz_file in zip(ground_removed_image_paths, laz_point_cloud_paths):
 
-
             dilation_cirkular_kernel, image = self.hough_lines(tif)
-            print("hough_lines")
             reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, = self.make_polygons(dilation_cirkular_kernel)
-            #viz_polygon(dilation_cirkular_kernel, reg_polygons, multi_polygons)
-            print("make_polygons")
             
             point_cloud = laspy.read(laz_file, laz_backend=laspy.compression.LazBackend.LazrsParallel)
             indexes_needed = self.filter_polygons(reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, point_cloud, image)
-            print("filter_polygons")
             self.indexes_needed_list.append(indexes_needed)
-
         return self
 
     def score(self, _, __):
         _, laz_point_cloud_paths = self.GetPathRelations()
 
-        #return 0
         pct_lost_datapoints_list = []
         pct_lost_powerline_list = []
+
         for i, laz_file in enumerate(laz_point_cloud_paths):
             point_cloud = laspy.read(laz_file, laz_backend=laspy.compression.LazBackend.LazrsParallel)
+
             indexes_needed = self.indexes_needed_list[i]
             new_point_data = point_cloud[indexes_needed]
 
             amount_wire = np.sum(point_cloud.classification == 14)
             new_amount_wire = np.sum(new_point_data.classification == 14)
-            pct_lost_powerline = 1-(amount_wire/new_amount_wire)
-            pct_lost_datapoints_list.append(pct_lost_powerline)
+
+            pct_lost_powerline = 1-(new_amount_wire/amount_wire)
+            pct_lost_powerline_list.append(pct_lost_powerline)
 
             amount_points = len(point_cloud)
             new_amount_points = len(new_point_data)
 
             pct_lost_datapoints = 1-(new_amount_points/amount_points)
-            pct_lost_powerline_list.append(pct_lost_datapoints)
-            print("Done")
-        if np.mean(pct_lost_powerline_list) > 0.01:
+            pct_lost_datapoints_list.append(pct_lost_datapoints)
+            
+            file = open('results.txt','a')
+            items = [i, laz_file, amount_points, new_amount_points, pct_lost_datapoints, pct_lost_powerline, self.get_params()]
+            for item in items[:-1]:
+                file.write(str(item)+",")
+            file.write(str(items[-1])+"\n")
+            file.close()
+        
+        print("Finished Iter")
+        if np.mean(pct_lost_powerline_list) > 0.001:
             return 0
         else:
             return np.mean(pct_lost_datapoints_list)
@@ -374,46 +343,42 @@ def GetPathRelations(path):
     return ground_removed_image_paths, laz_point_cloud_paths
 
 
+parser = argparse.ArgumentParser(description='Path to data folder.')
+parser.add_argument('folder', type=str, help='folder with data')
+args = parser.parse_args()
+dir = args.folder
+
 if __name__ == "__main__":
 
-    file = "/home/jf/Downloads/WingDownload/PUNKTSKY_00005_1km_6161_465"
-    #clf = TemplateClassifier("/home/jf/data/", 70)
-    #gg = clf.GetPathRelations()
-    #print(gg)
-    #print(file)
-    # clf = TemplateClassifier(path="/home/jf/data/", canny_lower=1, canny_upper=1,hough_lines_treshold=1,
-    #         min_line_length=1,max_line_gap=1, closing_kernel_size=1,
-    #         opening_kernel_size=1, meters_around_line=1, simplify_tolerance=1)
-
     cv = [(slice(None), slice(None))]
-    param = {
-            "path": Categorical(["/home/jf/data/"]),
-            "canny_lower": Integer(3,50),
-            "canny_upper": Integer(80,200),
+    params = {
+            "path": Categorical([dir]),
+            "canny_lower": Integer(15,60),
+            "canny_upper": Integer(100,200),
             "hough_lines_treshold": Integer(3,15),
-            "min_line_length": Integer(1,5),
+            "min_line_length": Integer(1,7),
             "max_line_gap": Integer(1,5),
             "closing_kernel_size": Integer(1,10),
             "opening_kernel_size": Integer(1,10),
-            "meters_around_line": Integer(1,3),
-            "simplify_tolerance": Integer(1,32),
+            "meters_around_line": Integer(1,10),
+            "simplify_tolerance": Integer(1,20),
     }
 
     opt = BayesSearchCV(
-        TemplateClassifier(),search_spaces=param,
+        TemplateClassifier(),search_spaces=params,
         cv=cv,
-        n_iter=5,
+        n_iter=70,
         n_jobs=-1,
         random_state=0
     )
+    
     # executes bayesian optimization
-    X = [[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2],[1,2]]
-    Y = [1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2]
     X = [[1,2],[1,2],[1,2],[1,2]]
     Y = [1,2,1,2]
-    #X = GetPathRelations("/home/jf/data/")
+
+    print("Started Fit")
     _ = opt.fit(X,Y)
 
     # model can be saved, used for predictions or scoring
-    print(opt.best_score_)
-    print(opt.best_params_)
+    print("The best score: ", opt.best_score_)
+    print("The best params ", opt.best_params_)
