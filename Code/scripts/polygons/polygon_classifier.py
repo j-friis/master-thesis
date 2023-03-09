@@ -310,7 +310,8 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
                 file.write(str(item)+",")
             file.write(str(items[-1])+"\n")
             file.close()
-
+        
+        print("Finished Iter")
         if np.mean(pct_lost_powerline_list) > 0.001:
             return 0
         else:
@@ -374,7 +375,8 @@ if __name__ == "__main__":
     # executes bayesian optimization
     X = [[1,2],[1,2],[1,2],[1,2]]
     Y = [1,2,1,2]
-    #X = GetPathRelations("/home/jf/data/")
+
+    print("Started Fit")
     _ = opt.fit(X,Y)
 
     # model can be saved, used for predictions or scoring
