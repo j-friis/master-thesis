@@ -11,12 +11,14 @@ import shapely
 from matplotlib.path import Path
 from skopt import BayesSearchCV
 from skopt.space import Categorical, Integer
+import os
+
 
 class TemplateClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, path="~/data/", canny_lower=4, canny_upper=160,hough_lines_treshold=10,
                   min_line_length=5,max_line_gap=10, closing_kernel_size=5,
-                    opening_kernel_size=3, meters_around_line=1, simplify_tolerance=1):
+                    meters_around_line=1, simplify_tolerance=1, cc_area=50):
         self.path = path
         self.canny_lower = canny_lower
         self.canny_upper = canny_upper
@@ -24,9 +26,9 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
         self.min_line_length = min_line_length
         self.max_line_gap = max_line_gap
         self.closing_kernel_size = closing_kernel_size
-        self.opening_kernel_size = opening_kernel_size
         self.meters_around_line = meters_around_line
         self.simplify_tolerance = simplify_tolerance
+        self.cc_area = cc_area
         self.indexes_needed_list = []
 
     def GenPath(self, path):
@@ -42,11 +44,11 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
         laz_point_cloud_paths = []
         
         # Find full path to all images
-        for path in glob.glob(full_path_to_data+'ImagesGroundRemoved/*'):
+        for path in glob.glob(full_path_to_data+'ImagesGroundRemovedSmall/*'):
             ground_removed_image_paths.append(path)
     
         # Find full path to all laz files
-        for path in glob.glob(full_path_to_data+'LazFilesWithHeightParam/*'):
+        for path in glob.glob(full_path_to_data+'LazFilesWithHeightRemoved/*'):
             laz_point_cloud_paths.append(path)
             
         ground_removed_image_paths.sort()
@@ -85,9 +87,18 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
                 l = linesP[i][0]
                 cv2.line(lines_image, (l[0], l[1]), (l[2], l[3]), (255,0,0), 3)
 
-        # Apply Opening
-        opening_kernel = np.ones((self.opening_kernel_size,self.opening_kernel_size),np.uint8)
-        opening = cv2.morphologyEx(lines_image, cv2.MORPH_OPEN, opening_kernel)
+        # Create kernel
+        kernel = np.ones((3, 3), np.uint8)
+        # Perform dilation with the cirkular kernel
+        lines_image = cv2.dilate(lines_image, kernel, iterations=1)
+
+
+        (_, label_ids, bounding_box, _) = cv2.connectedComponentsWithStats(lines_image)
+        for i in range(len(bounding_box)):
+            area = bounding_box[i][cv2.CC_STAT_AREA]
+            if area < self.cc_area:
+                lines_image[label_ids == i] = 0
+
 
         # Pixels per kilometer
         x_pixels, y_pixels = image.shape
@@ -97,9 +108,9 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
         kernel_size = int(self.meters_around_line*np.ceil(x_per_km_pixels))
 
         # # Apply Dilation and create a cirkular kernel using (image, center_coordinates, radius, color, thickness)
-        circular_kernel = np.zeros((kernel_size, kernel_size), np.uint8)
+        circular_kernel = np.ones((kernel_size, kernel_size), np.uint8)
         cv2.circle(circular_kernel, (int(kernel_size/2), int(kernel_size/2)), int(kernel_size/2), 255, -1)
-        dilation_cirkular_kernel = cv2.dilate(opening, circular_kernel, iterations=1)
+        dilation_cirkular_kernel = cv2.dilate(lines_image, circular_kernel, iterations=1)
 
         return dilation_cirkular_kernel, image
 
@@ -186,7 +197,6 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
             simplified_all_multi_polygons_path.append(tmp)
 
         return simplified_all_polygons_path, simplified_all_multi_polygons_path, bbox_all_polygon_path, bbox_all_multi_polygons_path
-        
 
     def MaxMinNormalize(self, arr):
         return (arr - np.min(arr))/(np.max(arr)-np.min(arr))
@@ -205,7 +215,7 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
 
         # Format: [(1,1), (3,5), (1,5), ...] with 30 mio samples
         list_zipped = np.array(list(zip(x_values, y_values)))
-
+              
         # Generate a bool list to obtain the final indexes from the dataset
         indexes_needed = np.zeros(len(x_values), dtype=bool)
 
@@ -216,16 +226,17 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
             indexes_inside_box = np.array([index for index, x in enumerate(indexes_inside_box) if x])
             
             # Generate small dataset
-            tmp = list_zipped[indexes_inside_box]
-            
-            # Check if any of these points are in the polygon
-            indexes_inside_polygon = reg_polygons[i].contains_points(tmp)
-            
-            # Find the indexes from the box that is also inside the polygon
-            final_indexes = indexes_inside_box[indexes_inside_polygon]
-            
-            # Update the indexes
-            indexes_needed[final_indexes] = 1
+            if len(indexes_inside_box) != 0:
+                tmp = list_zipped[indexes_inside_box]
+                
+                # Check if any of these points are in the polygon
+                indexes_inside_polygon = reg_polygons[i].contains_points(tmp)
+                
+                # Find the indexes from the box that is also inside the polygon
+                final_indexes = indexes_inside_box[indexes_inside_polygon]
+                
+                # Update the indexes
+                indexes_needed[final_indexes] = 1
 
         for i in range(len(multi_polygons)):
             tmp_indexes_needed = np.zeros(len(x_values), dtype=bool)
@@ -256,16 +267,17 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
                 indexes_inside_box = np.array([index for index, x in enumerate(indexes_inside_box) if x])
                 
                 # Generate small dataset
-                tmp = list_zipped[indexes_inside_box]
+                if len(indexes_inside_box) != 0:
+                    tmp = list_zipped[indexes_inside_box]
                 
-                # Check if any of these points are in the polygon
-                indexes_inside_polygon = simpli_multi_pol[j].contains_points(tmp)
-                final_indexes = indexes_inside_box[indexes_inside_polygon]
-                
-                # Update the indexes
-                tmp_indexes_not_needed[final_indexes] = 1
+                    # Check if any of these points are in the polygon
+                    indexes_inside_polygon = simpli_multi_pol[j].contains_points(tmp)
+                    final_indexes = indexes_inside_box[indexes_inside_polygon]
+                    
+                    # Update the indexes
+                    tmp_indexes_not_needed[final_indexes] = 1
         
-            indexes_needed = indexes_needed | (tmp_indexes_needed & np.invert(tmp_indexes_not_needed))
+                    indexes_needed = indexes_needed | (tmp_indexes_needed & np.invert(tmp_indexes_not_needed))
         return indexes_needed
 
     def fit(self, X, y):
@@ -278,12 +290,11 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
             point_cloud = laspy.read(laz_file, laz_backend=laspy.compression.LazBackend.LazrsParallel)
             indexes_needed = self.filter_polygons(reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, point_cloud, image)
             self.indexes_needed_list.append(indexes_needed)
-        return self
 
     def score(self, _, __):
         _, laz_point_cloud_paths = self.GetPathRelations()
 
-        pct_lost_datapoints_list = []
+        pct_kept_datapoints_list = []
         pct_lost_powerline_list = []
 
         for i, laz_file in enumerate(laz_point_cloud_paths):
@@ -295,27 +306,34 @@ class TemplateClassifier(BaseEstimator, ClassifierMixin):
             amount_wire = np.sum(point_cloud.classification == 14)
             new_amount_wire = np.sum(new_point_data.classification == 14)
 
+            print("amount_wire", amount_wire)
+            print("amount_wire", new_amount_wire)
+
             pct_lost_powerline = 1-(new_amount_wire/amount_wire)
+            print(pct_lost_powerline)
+            print(new_amount_wire/amount_wire)
+            print()
+
             pct_lost_powerline_list.append(pct_lost_powerline)
 
             amount_points = len(point_cloud)
             new_amount_points = len(new_point_data)
 
-            pct_lost_datapoints = 1-(new_amount_points/amount_points)
-            pct_lost_datapoints_list.append(pct_lost_datapoints)
+            pct_kept_datapoints = (new_amount_points/amount_points)
+            pct_kept_datapoints_list.append(pct_kept_datapoints)
             
-            file = open('results.txt','a')
-            items = [i, laz_file, amount_points, new_amount_points, pct_lost_datapoints, pct_lost_powerline, self.get_params()]
+            file = open('results_small.txt','a')
+            items = [i, laz_file, amount_points, new_amount_points, pct_kept_datapoints, pct_lost_powerline, self.get_params()]
             for item in items[:-1]:
                 file.write(str(item)+",")
             file.write(str(items[-1])+"\n")
             file.close()
         
-        print("Finished Iter")
-        if np.mean(pct_lost_powerline_list) > 0.001:
-            return 0
-        else:
-            return np.mean(pct_lost_datapoints_list)
+        alpha = 0.95
+        score = max(0, 1-((1-alpha)*np.mean(pct_kept_datapoints_list))-(alpha*np.mean(pct_lost_powerline_list)))
+        print("Finished Iter with score: ", score)
+
+        return score
         
 def GenPath(path):
         if path[-1] == '/':
@@ -330,16 +348,17 @@ def GetPathRelations(path):
     laz_point_cloud_paths = []
     
     # Find full path to all images
-    for path in glob.glob(full_path_to_data+'ImagesGroundRemoved/*'):
+    for path in glob.glob(full_path_to_data+'ImagesGroundRemovedSmall/*'):
         ground_removed_image_paths.append(path)
 
     # Find full path to all laz files
-    for path in glob.glob(full_path_to_data+'LazFilesWithHeightParam/*'):
+    for path in glob.glob(full_path_to_data+'LazFilesWithHeightRemoved/*'):
         laz_point_cloud_paths.append(path)
         
     ground_removed_image_paths.sort()
     laz_point_cloud_paths.sort()
-    assert(len(ground_removed_image_paths)==len(laz_point_cloud_paths))
+    assert len(ground_removed_image_paths)==len(laz_point_cloud_paths), 'Length of images did not match length of laz'
+
     return ground_removed_image_paths, laz_point_cloud_paths
 
 
@@ -350,25 +369,28 @@ dir = args.folder
 
 if __name__ == "__main__":
 
+    n_cpu = os.cpu_count()
+    print("Number of CPUs in the system:", n_cpu)
+
     cv = [(slice(None), slice(None))]
     params = {
             "path": Categorical([dir]),
-            "canny_lower": Integer(15,60),
-            "canny_upper": Integer(100,200),
-            "hough_lines_treshold": Integer(3,15),
-            "min_line_length": Integer(1,7),
-            "max_line_gap": Integer(1,5),
-            "closing_kernel_size": Integer(1,10),
-            "opening_kernel_size": Integer(1,10),
-            "meters_around_line": Integer(1,10),
-            "simplify_tolerance": Integer(1,20),
+            "canny_lower": [19],
+            "canny_upper": [101],
+            "hough_lines_treshold": [50],
+            "min_line_length": [12],
+            "max_line_gap": [6],
+            "closing_kernel_size": [1],
+            "meters_around_line": [10],
+            "simplify_tolerance": [8],
+            "cc_area": [1500]
     }
 
     opt = BayesSearchCV(
         TemplateClassifier(),search_spaces=params,
         cv=cv,
-        n_iter=70,
-        n_jobs=-1,
+        n_iter=1,
+        n_jobs=n_cpu-1,
         random_state=0
     )
     

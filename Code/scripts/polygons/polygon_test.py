@@ -36,6 +36,7 @@ class LazPreprocessing(object):
 
     def ImageProcessing(self):
         # Load Image
+        print(self.path_to_data+'data/ImagesGroundRemovedSmall/'+self.filename+'_max.tif')
         image = cv2.imread(self.path_to_data+'data/ImagesGroundRemovedSmall/'+self.filename+'_max.tif', cv2.IMREAD_UNCHANGED)
         image = np.where(image >= 0, image, 0)
         image = image/np.max(image)
@@ -255,4 +256,24 @@ class LazPreprocessing(object):
     
     def Predictions(self, indexes_needed, point_cloud):
         new_point_cloud = point_cloud[indexes_needed]
+        print("Point Cloud Wire Conductor Points:", np.sum(point_cloud.classification == 14))
+        print("Remaining Wire Conductor Points:", np.sum(new_point_cloud.classification == 14))
+
+        print("PCT KEPT Wire Conductor", np.sum(new_point_cloud.classification == 14)/np.sum(point_cloud.classification == 14))
+        print("PCT LOST DATAPOINTS: ", 1-len(new_point_cloud)/len(point_cloud))
         return new_point_cloud
+
+
+if __name__ == "__main__":
+    
+    paths = glob.glob(os.path.expanduser('~')+'/data/TestData/data/ImagesGroundRemovedSmall/*')
+    paths = [p[59:-8] for p in paths]
+
+    for name in paths:
+        obj = LazPreprocessing(path_to_data=os.path.expanduser('~')+'/data/TestData/', filename=name)
+        new_las = obj()
+
+        point_data = np.stack([new_las.X, new_las.Y, new_las.Z], axis=0).transpose((1, 0))
+        geom = o3d.geometry.PointCloud()
+        geom.points = o3d.utility.Vector3dVector(point_data)
+        o3d.visualization.draw_geometries([geom])
