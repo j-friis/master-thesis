@@ -28,7 +28,7 @@ def worker(output_dir: Path, file: str):
             "filename":"%s/%s_max.tif",
             "output_type":"max",
             "gdaldriver":"GTiff",
-            "resolution":0.1
+            "resolution":1.0
         }
     ]
     """ % (str(file), str(output_dir), out_file)
