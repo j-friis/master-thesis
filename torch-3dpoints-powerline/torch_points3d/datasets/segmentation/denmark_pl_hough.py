@@ -11,6 +11,7 @@ import laspy
 import torch
 from torch_geometric.data import Data, Dataset
 from torch_points3d.metrics.segmentation_tracker import SegmentationTracker
+from torch_points3d.core.data_transform.polygon import LazPreprocessing
 import ipdb
 
 #CLASSES = ["Unclassified", "Ground", "Low veg", "Medium Veg", "High Veg", "Building", "noise", "keypoint", "Water", "wire_conductor", "bridge_deck", "Reserved" ]
@@ -100,7 +101,7 @@ class Denmark(Dataset):
             # TODO modify the laspy for reading the version
             try:
                 # room_data = laspy.read(room_path, laz_backend=laspy.LazBackend)
-                room_data = laspy.read(room_path, laz_backend=laspy.compression.LazBackend.Laszip)
+                room_data = laspy.read(room_path, laz_backend=laspy.compression.LazBackend.LazrsParallel)
             except Exception as e:
                 continue
             # room_data = room_data.values
