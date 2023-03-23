@@ -17,15 +17,15 @@ block_size_x: 0.1  # tuple for normalized sampling area (e.g., if 1km = 1, 200m 
 block_size_y: 0.1 # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05
 canny_lower: 19
 canny_upper: 101
-cc_area: 196
-hough_lines_treshold: 50
+cc_area: 1500
+hough_lines_treshold: 30
 max_line_gap: 6
-meters_around_line: 10
 min_line_length: 12
+meters_around_line: 10
 simplify_tolerance: 8
 pdal_env: /home/jf/miniconda3/envs/pdal/bin/python 
 pdal_script_path: /home/jf/Documents/msc/torch-3dpoints-powerline/torch_points3d/core/data_transform/pdal/run_pipeline.py
-pdal_workers: 1
+pdal_workers: 3
 pdal_height: 3
 #first_subsampling: 0.08
 #train_overlap: 0.05  #0.025
