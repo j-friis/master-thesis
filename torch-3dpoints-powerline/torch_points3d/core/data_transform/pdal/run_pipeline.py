@@ -12,8 +12,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     dir = args.folder
-    MAX_WORKERS = args.folder
-    height_filter = args.folder
+    MAX_WORKERS = args.max_workers
+    height_filter = args.height_filter
 
     height_dir_name = "LazFilesWithHeightParam"
     height_removed_dir_name = "LazFilesWithHeightRemoved"
