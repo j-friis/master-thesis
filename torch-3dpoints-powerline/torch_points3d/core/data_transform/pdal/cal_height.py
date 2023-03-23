@@ -6,7 +6,7 @@ from multiprocessing import Pool
 
 from pathlib import Path
 
-def worker(output_dir: Path, file: str):
+def worker(dir: Path, output_dir: Path, file: str):
     file_name = file.name
     print(file_name)
     out_file = file_name.split(".")[0]
@@ -41,7 +41,7 @@ def cal_height(dir: Path, output_dir: Path, MAX_WORKERS: int):
     #print(onlyfiles)
     #onlyfiles = [join(dir, f) for f in onlyfiles]
 
-    func = partial(worker, output_dir)
+    func = partial(worker, dir, output_dir)
 
     with Pool(MAX_WORKERS) as p:
         p.map(func, onlyfiles)
