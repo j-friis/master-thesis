@@ -6,7 +6,7 @@ class: denmark_pl_hough.DenmarkDataset
 name: "Denmark"
 task: segmentation
 dataroot: /home/jf/msc_data
-processed_folder: "processed_var_1"
+processed_folder: "processed_hough"
 use_category: False
 visualization: True
 #features: []
@@ -18,12 +18,15 @@ block_size_y: 0.1 # tuple for normalized sampling area (e.g., if 1km = 1, 200m =
 canny_lower: 19
 canny_upper: 101
 cc_area: 196
-closing_kernel_size: 1
 hough_lines_treshold: 50
 max_line_gap: 6
 meters_around_line: 10
 min_line_length: 12
 simplify_tolerance: 8
+pdal_env: /home/jf/miniconda3/envs/pdal/bin/python 
+pdal_script_path: /home/jf/Documents/msc/torch-3dpoints-powerline/torch_points3d/core/data_transform/pdal/run_pipeline.py
+pdal_workers: 1
+pdal_height: 3
 #first_subsampling: 0.08
 #train_overlap: 0.05  #0.025
 #block_size_x: 0.1  # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05
@@ -46,17 +49,6 @@ train_transform:
       size: ${data.first_subsampling}
       quantize_coords: True
       mode: "last"
-  - transform: h
-    params:
-      canny_lower: 19
-      canny_upper: 101
-      cc_area: 196
-      closing_kernel_size: 1
-      hough_lines_treshold: 40
-      max_line_gap: 6
-      meters_around_line: 10
-      min_line_length: 12
-      simplify_tolerance: 8
 
 val_transform:
   - transform: MinPoints
