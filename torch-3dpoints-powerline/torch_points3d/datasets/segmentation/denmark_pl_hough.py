@@ -1,6 +1,9 @@
+import shlex
+import subprocess
 from tqdm.auto import tqdm
 from itertools import product
 from pathlib import Path
+
 
 import numpy as np
 import pandas as pd
@@ -18,8 +21,11 @@ from torch_points3d.datasets.base_dataset import BaseDataset
 
 
 class Denmark(Dataset):
-    def __init__(self, root, split, block_size, overlap: float, global_z=None,
+    def __init__(self, root, pdal_env, pdal_script_path, pdal_workers, pdal_height, 
+                 split, block_size, overlap: float, global_z=None,
                  transform=None, pre_transform=None, pre_filter=None):
+        #ipdb.set_trace()
+        
         self.processed_file_names_ = []
         # init some constant to know label names
         self.classes = CLASSES
@@ -36,7 +42,15 @@ class Denmark(Dataset):
 
         self.n_classes = len(CLASSES)
 
+
+        self.pdal_env = pdal_env
+        self.pdal_script_path = pdal_script_path
+        self.pdal_workers = pdal_workers
+        self.pdal_height = pdal_height
+
+
         self.processed_split_folder = (Path(root) / "processed" / f"{split}_{overlap}_{block_size}")
+        #ipdb.set_trace()
         super(Denmark, self).__init__(
             root, transform, pre_transform, pre_filter
         )
@@ -50,17 +64,28 @@ class Denmark(Dataset):
         self.global_z = stats["global_z"]
 
         self.processed_file_names_ = list(self.processed_split_folder.glob("*cloud_*.pt"))
+        #ipdb.set_trace()
 
         print("Total of {} samples in {} set.".format(len(self), split))
 
     def process(self):
         # ## process data
+        #ipdb.set_trace()
         print(f"processing {self.split} split")
         self.processed_split_folder.mkdir(exist_ok=True)
         room_points, room_labels = [], []
         room_coord_min, room_coord_max = [], []
         room_names = []
         n_point_rooms = []
+        
+        #do the pdal pipeline
+        #ipdb.set_trace()
+        print("process")
+        cmd = f'{self.pdal_env} {self.pdal_script_path} {str(Path(self.raw_dir) / self.split)} {self.pdal_workers} {self.pdal_height}'
+        subprocess_cmd = shlex.split(cmd)
+        ipdb.set_trace()
+        my_subprocess = subprocess.run(subprocess_cmd)
+        
         # load all room data
         for room_path in tqdm(self.raw_file_names):
             print(room_path)
@@ -90,7 +115,7 @@ class Denmark(Dataset):
             # labels[~(hig_veg | building | ground)] = 3  # rest
 
             # modify for new dataset
-            ipdb.set_trace()
+            #ipdb.set_trace()
             if 14 not in tmp_labels:
                 continue
 
@@ -284,13 +309,15 @@ class DenmarkDataset(BaseDataset):
         super().__init__(dataset_opt)
         block_size = (dataset_opt.block_size_x,
                       dataset_opt.block_size_y)  # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2)
-        ipdb.set_trace()
+        #ipdb.set_trace()
         """"
         important line
         """
         self.train_dataset = Denmark(
-            split='train', root=self._data_path, overlap=dataset_opt.train_overlap,
-            block_size=block_size,
+            split='train', root=self._data_path,
+            pdal_env= dataset_opt.pdal_env, pdal_script_path= dataset_opt.pdal_script_path, 
+            pdal_workers=dataset_opt.pdal_workers, pdal_height=dataset_opt.pdal_height,
+            overlap=dataset_opt.train_overlap, block_size=block_size,
             transform=self.train_transform, pre_transform=self.pre_transform
         )
         # self.train_dataset.add_weights(class_weight_method="log")
@@ -298,16 +325,22 @@ class DenmarkDataset(BaseDataset):
 
 
         self.val_dataset = Denmark(
-            split='val', root=self._data_path, overlap=0,
+            split='val', root=self._data_path, pdal_env= dataset_opt.pdal_env,
+            pdal_script_path= dataset_opt.pdal_script_path, overlap=0,
+            pdal_workers=dataset_opt.pdal_workers, pdal_height=dataset_opt.pdal_height,
             block_size=block_size, global_z=self.train_dataset.global_z,
             transform=self.val_transform, pre_transform=self.pre_transform
         )
 
         self.test_dataset = Denmark(
-            split='test', root=self._data_path, overlap=0,
+            split='test', root=self._data_path, pdal_env= dataset_opt.pdal_env,
+            pdal_script_path= dataset_opt.pdal_script_path, overlap=0,
+            pdal_workers=dataset_opt.pdal_workers, pdal_height=dataset_opt.pdal_height,
             block_size=block_size, global_z=self.train_dataset.global_z,
             transform=self.test_transform, pre_transform=self.pre_transform
         )
+        ipdb.set_trace()
+        print("DenmarkDataset INIT")
 
     @property
     def test_data(self):
