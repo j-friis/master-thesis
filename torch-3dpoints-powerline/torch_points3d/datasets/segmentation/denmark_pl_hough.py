@@ -94,7 +94,7 @@ class Denmark(Dataset):
         new_laz_dir = Path(self.raw_dir).joinpath(self.split).joinpath("NewLaz")
         new_laz_dir.mkdir(exist_ok=True)
         path_to_data = Path(self.raw_dir) / self.split
-        ipdb.set_trace()
+        #ipdb.set_trace()
 
         print("Runing polygon")
 
