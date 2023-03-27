@@ -27,6 +27,9 @@ pdal_env: /home/jf/miniconda3/envs/pdal/bin/python
 pdal_script_path: /home/jf/Documents/msc/torch-3dpoints-powerline/torch_points3d/core/data_transform/pdal/run_pipeline.py
 pdal_workers: 3
 pdal_height: 3
+outlier_voxel_size: 0.7
+outlier_nb_neighbors: 19
+outlier_std_ratio: 50
 #first_subsampling: 0.08
 #train_overlap: 0.05  #0.025
 #block_size_x: 0.1  # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05

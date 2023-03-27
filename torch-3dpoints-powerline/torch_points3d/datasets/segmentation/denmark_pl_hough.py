@@ -5,13 +5,14 @@ from itertools import product
 from pathlib import Path
 
 
+import open3d as o3d
 import numpy as np
-import pandas as pd
 import laspy
 import torch
 from torch_geometric.data import Data, Dataset
 from torch_points3d.metrics.segmentation_tracker import SegmentationTracker
 from torch_points3d.core.data_transform.polygon import LazPreprocessing
+from torch_points3d.core.data_transform.outlier_removal_o3d import OutlierDetection
 import ipdb
 
 #CLASSES = ["Unclassified", "Ground", "Low veg", "Medium Veg", "High Veg", "Building", "noise", "keypoint", "Water", "wire_conductor", "bridge_deck", "Reserved" ]
@@ -22,8 +23,8 @@ from torch_points3d.datasets.base_dataset import BaseDataset
 
 class Denmark(Dataset):
     def __init__(self, root, pdal_env, pdal_script_path, pdal_workers, pdal_height, 
-                 polygon_param, split, block_size, overlap: float, global_z=None,
-                 transform=None, pre_transform=None, pre_filter=None):
+                 polygon_param, outlier_param, split, block_size, overlap: float,
+                 global_z=None, transform=None, pre_transform=None, pre_filter=None):
         #ipdb.set_trace()
         
         self.processed_file_names_ = []
@@ -48,6 +49,7 @@ class Denmark(Dataset):
         self.pdal_workers = pdal_workers
         self.pdal_height = pdal_height
         self.polygon_param = polygon_param
+        self.outlier_param = outlier_param
 
 
         self.processed_split_folder = (Path(root) / "processed" / f"{split}_{overlap}_{block_size}")
@@ -78,20 +80,9 @@ class Denmark(Dataset):
         room_coord_min, room_coord_max = [], []
         room_names = []
         n_point_rooms = []
-        #ipdb.set_trace()
-
-        # h = Path('/home/jf/msc_data/denmark/raw/train/ImagesGroundRemoved')
-        # print(list(h.glob("*")))
-
-        # g = Path(self.raw_dir).joinpath(self.split).joinpath("NewLaz")
-        # print(list(g.glob("*.tif")))
-        #do the pdal pipeline
-        #ipdb.set_trace()
-        #print("process")
 
         #Runing pdal pipeline
-        print("process")
-
+        print("Runing pdal pipeline")
         cmd = f'{self.pdal_env} {self.pdal_script_path} {str(Path(self.raw_dir) / self.split)} {self.pdal_workers} {self.pdal_height}'
         subprocess_cmd = shlex.split(cmd)
         my_subprocess = subprocess.run(subprocess_cmd, stdout=subprocess.DEVNULL)
@@ -102,8 +93,13 @@ class Denmark(Dataset):
         # load all room data
         new_laz_dir = Path(self.raw_dir).joinpath(self.split).joinpath("NewLaz")
         new_laz_dir.mkdir(exist_ok=True)
-        print("Polygon")
         path_to_data = Path(self.raw_dir) / self.split
+        #ipdb.set_trace()
+
+        print("Runing polygon")
+
+        outlier_clf = OutlierDetection(voxel_size=self.outlier_param["voxel_size"],
+                                        nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
         for file in tqdm(file_names):
             pre = LazPreprocessing(path_to_data=str(path_to_data), filename=file, 
                 canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
@@ -111,10 +107,9 @@ class Denmark(Dataset):
                 min_line_length=self.polygon_param["min_line_length"], meters_around_line=self.polygon_param["meters_around_line"],
                 cc_area=self.polygon_param["cc_area"], simplify_tolerance=self.polygon_param["simplify_tolerance"])
             new_laz = pre()
+            new_laz = outlier_clf.RemoveOutliersFromLas(new_laz)
             new_laz.write(str(new_laz_dir)+'/'+file+".laz", do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
         # load all room data
-        print("Polygon")
-        #ipdb.set_trace()
 
         new_laz_files = new_laz_dir.glob("*.laz")
 
@@ -351,10 +346,16 @@ class DenmarkDataset(BaseDataset):
         polygon_param["meters_around_line"] = dataset_opt.meters_around_line
         polygon_param["simplify_tolerance"] = dataset_opt.simplify_tolerance
 
+        outlier_param = {}
+        outlier_param["voxel_size"] = dataset_opt.outlier_voxel_size
+        outlier_param["nb_neighbors"] = dataset_opt.outlier_nb_neighbors
+        outlier_param["std_ratio"] = dataset_opt.outlier_std_ratio
+
         self.train_dataset = Denmark(
             split='train', root=self._data_path,
             pdal_env= dataset_opt.pdal_env, pdal_script_path= dataset_opt.pdal_script_path, 
-            pdal_workers=dataset_opt.pdal_workers, pdal_height=dataset_opt.pdal_height, polygon_param= polygon_param,
+            pdal_workers=dataset_opt.pdal_workers, pdal_height=dataset_opt.pdal_height,
+            polygon_param= polygon_param, outlier_param=outlier_param,
             overlap=dataset_opt.train_overlap, block_size=block_size,
             transform=self.train_transform, pre_transform=self.pre_transform
         )
@@ -364,7 +365,8 @@ class DenmarkDataset(BaseDataset):
 
         self.val_dataset = Denmark(
             split='val', root=self._data_path, pdal_env= dataset_opt.pdal_env,
-            pdal_script_path= dataset_opt.pdal_script_path, polygon_param= polygon_param, overlap=0,
+            pdal_script_path= dataset_opt.pdal_script_path, polygon_param= polygon_param,
+            outlier_param=outlier_param, overlap=0,
             pdal_workers=dataset_opt.pdal_workers, pdal_height=dataset_opt.pdal_height, 
             block_size=block_size, global_z=self.train_dataset.global_z,
             transform=self.val_transform, pre_transform=self.pre_transform
@@ -372,13 +374,12 @@ class DenmarkDataset(BaseDataset):
 
         self.test_dataset = Denmark(
             split='test', root=self._data_path, pdal_env= dataset_opt.pdal_env,
-            pdal_script_path= dataset_opt.pdal_script_path, polygon_param= polygon_param, overlap=0,
+            pdal_script_path= dataset_opt.pdal_script_path, polygon_param= polygon_param,
+            outlier_param=outlier_param, overlap=0,
             pdal_workers=dataset_opt.pdal_workers, pdal_height=dataset_opt.pdal_height,
             block_size=block_size, global_z=self.train_dataset.global_z,
             transform=self.test_transform, pre_transform=self.pre_transform
         )
-        #ipdb.set_trace()
-        print("DenmarkDataset INIT")
 
     @property
     def test_data(self):
