@@ -82,10 +82,10 @@ class Denmark(Dataset):
         n_point_rooms = []
 
         #Runing pdal pipeline
-        print("Runing pdal pipeline")
-        cmd = f'{self.pdal_env} {self.pdal_script_path} {str(Path(self.raw_dir) / self.split)} {self.pdal_workers} {self.pdal_height}'
-        subprocess_cmd = shlex.split(cmd)
-        my_subprocess = subprocess.run(subprocess_cmd, stdout=subprocess.DEVNULL)
+        # print("Runing pdal pipeline")
+        # cmd = f'. ~/miniconda3/etc/profile.d/conda.sh {self.pdal_script_path} {str(Path(self.raw_dir) / self.split)} {self.pdal_workers} {self.pdal_height}'
+        # subprocess_cmd = shlex.split(cmd)
+        # my_subprocess = subprocess.run(subprocess_cmd, stdout=subprocess.DEVNULL)
 
         #ipdb.set_trace()
 
@@ -94,7 +94,7 @@ class Denmark(Dataset):
         new_laz_dir = Path(self.raw_dir).joinpath(self.split).joinpath("NewLaz")
         new_laz_dir.mkdir(exist_ok=True)
         path_to_data = Path(self.raw_dir) / self.split
-        #ipdb.set_trace()
+        ipdb.set_trace()
 
         print("Runing polygon")
 
