@@ -26,7 +26,7 @@ class OutlierDetection():
     
     def RemoveOutliersFromLas(self, las):
         point_data = np.stack([las.X, las.Y, las.Z], axis=0).transpose((1, 0))
-        ind = self.RemoveOutliersFromPointData(self, point_data)
+        ind = self.RemoveOutliersFromPointData(point_data)
         return las[ind]
     
 

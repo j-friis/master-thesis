@@ -83,9 +83,9 @@ class Denmark(Dataset):
 
         #Runing pdal pipeline
         print("Runing pdal pipeline")
-        # cmd = f'{self.pdal_env} {self.pdal_script_path} {str(Path(self.raw_dir) / self.split)} {self.pdal_workers} {self.pdal_height}'
-        # subprocess_cmd = shlex.split(cmd)
-        # my_subprocess = subprocess.run(subprocess_cmd, stdout=subprocess.DEVNULL)
+        cmd = f'{self.pdal_env} {self.pdal_script_path} {str(Path(self.raw_dir) / self.split)} {self.pdal_workers} {self.pdal_height}'
+        subprocess_cmd = shlex.split(cmd)
+        my_subprocess = subprocess.run(subprocess_cmd, stdout=subprocess.DEVNULL)
 
         #ipdb.set_trace()
 
