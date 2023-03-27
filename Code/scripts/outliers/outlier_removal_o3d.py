@@ -7,7 +7,8 @@ class OutlierDetection():
         self.nb_neighbors = nb_neighbors
         self.std_ratio = std_ratio
         self.voxel_size = voxel_size
-
+        self.removed_outliers = 0
+        self.processed_point_clouds = 0
 
     def RemoveOutliersFromPointData(self, point_data):
         # Create o3d Point Cloud
@@ -17,6 +18,8 @@ class OutlierDetection():
 
         _, ind = voxel_down_pcd.remove_statistical_outlier(nb_neighbors=self.nb_neighbors,
                                                                 std_ratio=self.std_ratio)
+        self.removed_outliers += len(point_data)-len(ind)
+        self.processed_point_clouds += 1
         return ind
     
     
