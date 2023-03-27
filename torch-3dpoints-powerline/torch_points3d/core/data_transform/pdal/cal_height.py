@@ -1,7 +1,6 @@
 import argparse
 from functools import partial
 import pdal
-from tqdm import tqdm
 from multiprocessing import Pool
 
 from pathlib import Path
