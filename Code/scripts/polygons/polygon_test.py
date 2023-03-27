@@ -273,7 +273,9 @@ if __name__ == "__main__":
         obj = LazPreprocessing(path_to_data=os.path.expanduser('~')+'/data/TestData/', filename=name)
         new_las = obj()
 
-        point_data = np.stack([new_las.X, new_las.Y, new_las.Z], axis=0).transpose((1, 0))
-        geom = o3d.geometry.PointCloud()
-        geom.points = o3d.utility.Vector3dVector(point_data)
-        o3d.visualization.draw_geometries([geom])
+        new_las.write('new_las/'+name+'_processed.las')
+
+        #point_data = np.stack([new_las.X, new_las.Y, new_las.Z], axis=0).transpose((1, 0))
+        #geom = o3d.geometry.PointCloud()
+        #geom.points = o3d.utility.Vector3dVector(point_data)
+        #o3d.visualization.draw_geometries([geom])

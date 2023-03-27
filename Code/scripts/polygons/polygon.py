@@ -6,7 +6,7 @@ import rasterio
 from rasterio.features import shapes
 from shapely.geometry import Polygon, mapping
 import shapely
-from matplotlib.path import Path
+from matplotlib.path import Path as plt_path
 import open3d as o3d
 import os
 import glob
@@ -143,7 +143,7 @@ class LazPreprocessing(object):
             y_min = values[1]
             y_max = values[3]
             bb = [(x_min, y_min), (x_min, y_max), (x_max, y_max), (x_max, y_min)]
-            bbox_all_polygon_path.append(Path(bb))
+            bbox_all_polygon_path.append(plt_path(bb))
 
         # Create bounding box for multi polygons
         bbox_all_multi_polygons_path = []
@@ -163,10 +163,10 @@ class LazPreprocessing(object):
 
 
         # Create Path polygons from the simplified shapely polygons
-        simplified_all_polygons_path = [Path(mapping(p)['coordinates'][0]) for p in simplified_all_polygons]
+        simplified_all_polygons_path = [plt_path(mapping(p)['coordinates'][0]) for p in simplified_all_polygons]
         simplified_all_multi_polygons_path = []
         for multi_pol in simplified_all_multi_polygons:
-            tmp = [Path(mapping(p)['coordinates'][0]) for p in multi_pol]
+            tmp = [plt_path(mapping(p)['coordinates'][0]) for p in multi_pol]
             simplified_all_multi_polygons_path.append(tmp)
 
         return simplified_all_polygons_path, simplified_all_multi_polygons_path, bbox_all_polygon_path, bbox_all_multi_polygons_path

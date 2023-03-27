@@ -1,0 +1,30 @@
+import numpy as np
+import open3d as o3d
+
+class OutlierDetection():
+
+    def __init__(self, voxel_size=0.7, nb_neighbors=19, std_ratio=50):
+        self.nb_neighbors = nb_neighbors
+        self.std_ratio = std_ratio
+        self.voxel_size = voxel_size
+
+
+    def RemoveOutliersFromPointData(self, point_data):
+        # Create o3d Point Cloud
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(point_data)
+        voxel_down_pcd = pcd.voxel_down_sample(voxel_size=self.voxel_size)
+
+        _, ind = voxel_down_pcd.remove_statistical_outlier(nb_neighbors=self.nb_neighbors,
+                                                                std_ratio=self.std_ratio)
+        return ind
+    
+    
+    def RemoveOutliersFromLas(self, las):
+        point_data = np.stack([las.X, las.Y, las.Z], axis=0).transpose((1, 0))
+        ind = self.RemoveOutliersFromPointData(self, point_data)
+        return las[ind]
+    
+
+
+
