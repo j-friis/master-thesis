@@ -20,7 +20,6 @@ CLASSES = ["others", "wire_conductor"]
 # CLASSES = ["Ground", "High Veg", "Building", "combined"]
 from torch_points3d.datasets.base_dataset import BaseDataset
 
-
 class Denmark(Dataset):
     def __init__(self, root, pdal_env, pdal_script_path, pdal_workers, pdal_height, 
                  polygon_param, split, block_size, overlap: float, global_z=None,
@@ -89,10 +88,16 @@ class Denmark(Dataset):
         #do the pdal pipeline
         #ipdb.set_trace()
         #print("process")
-        #cmd = f'{self.pdal_env} {self.pdal_script_path} {str(Path(self.raw_dir) / self.split)} {self.pdal_workers} {self.pdal_height}'
-        #subprocess_cmd = shlex.split(cmd)
+
+        #Runing pdal pipeline
+        print("process")
+
+        cmd = f'{self.pdal_env} {self.pdal_script_path} {str(Path(self.raw_dir) / self.split)} {self.pdal_workers} {self.pdal_height}'
+        subprocess_cmd = shlex.split(cmd)
+        my_subprocess = subprocess.run(subprocess_cmd, stdout=subprocess.DEVNULL)
+
         #ipdb.set_trace()
-        #my_subprocess = subprocess.run(subprocess_cmd)
+
         file_names = [f.stem for f in self.raw_file_names]
         # load all room data
         new_laz_dir = Path(self.raw_dir).joinpath(self.split).joinpath("NewLaz")
@@ -109,9 +114,11 @@ class Denmark(Dataset):
             new_laz.write(str(new_laz_dir)+'/'+file+".laz", do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
         # load all room data
         print("Polygon")
-        ipdb.set_trace()
+        #ipdb.set_trace()
 
-        for room_path in tqdm(self.raw_file_names):
+        new_laz_files = new_laz_dir.glob("*.laz")
+
+        for room_path in tqdm(new_laz_files):
             print(room_path)
             room_name = room_path.stem
 
@@ -213,7 +220,7 @@ class Denmark(Dataset):
             # recover max room length from room and block scaling
             room_max = ((room_coord_max[room_i] - room_coord_min[room_i]) / room_coord_scale[room_i])[:2]
             n_split_2d = (np.ceil(room_max / self.overlap_difference)).astype(int)
-            ipdb.set_trace()
+            #ipdb.set_trace()
             for i, j in tqdm(product(range(n_split_2d[0]), range(n_split_2d[1]))):
                 point_idx = self.query_room(room_points[room_i], i, j)
 
@@ -370,7 +377,7 @@ class DenmarkDataset(BaseDataset):
             block_size=block_size, global_z=self.train_dataset.global_z,
             transform=self.test_transform, pre_transform=self.pre_transform
         )
-        ipdb.set_trace()
+        #ipdb.set_trace()
         print("DenmarkDataset INIT")
 
     @property
