@@ -21,7 +21,8 @@
 n_cpu=$(nproc --all)
 echo "${n_cpu}"
 echo Runing pdal pipeline
-source ~/miniconda3/etc/profile.d/conda.sh
+eval "$(conda shell.bash hook)"
+#source ~/miniconda3/etc/profile.d/conda.sh
 conda activate pdal
 python torch_points3d/core/data_transform/pdal/run_pipeline.py /home/jf/msc_data/denmark/raw/train $n_cpu 3
 python torch_points3d/core/data_transform/pdal/run_pipeline.py /home/jf/msc_data/denmark/raw/test $n_cpu 3
