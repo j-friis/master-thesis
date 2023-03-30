@@ -123,7 +123,8 @@ class Denmark(Dataset):
 
         outlier_clf = OutlierDetection(voxel_size=self.outlier_param["voxel_size"],
                                         nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
-        for file in tqdm(file_names):
+        for file in file_names:
+        #for file in tqdm(file_names):
             pre = HoughLinePre(path_to_data=str(path_to_data),
                 canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
                 hough_lines_treshold=self.polygon_param["hough_lines_treshold"], max_line_gap=self.polygon_param["max_line_gap"],
@@ -249,7 +250,7 @@ class Denmark(Dataset):
     
                     torch.save({"filename": room_name, "coord_min": coord_min, "coord_max":coord_max,
                                 "points": points, "labels": labels, "room_idx": room_i, "part_i": i, "part_j": j},
-                                self.processed_split_folder / f"{room_name}_cloud_{counter}.pt")
+                                self.processed_split_folder / f"{room_name}_{counter}_cloud_{counter}.pt")
                     counter += 1
             # TODO test how many points are actually in the partitions and merge/expand them if necessary
         stats = {
