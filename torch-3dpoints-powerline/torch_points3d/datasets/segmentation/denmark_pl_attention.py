@@ -59,14 +59,14 @@ class Denmark(Dataset):
     def process(self):
         # ## process data
         print(f"processing {self.split} split")
-        self.processed_split_folder.mkdir(exist_ok=True)
+        self.processed_split_folder.mkdir(exist_ok=True, parents=True)
         room_points, room_labels = [], []
         room_coord_min, room_coord_max = [], []
         room_names = []
         n_point_rooms = []
         # load all room data
         for room_path in tqdm(self.raw_file_names):
-            print(room_path)
+            #print(room_path)
             room_name = room_path.stem
 
             # codes for three classes
