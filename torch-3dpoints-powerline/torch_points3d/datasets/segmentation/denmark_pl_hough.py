@@ -3,6 +3,8 @@ import subprocess
 from tqdm.auto import tqdm
 from itertools import product
 from pathlib import Path
+from multiprocessing import Pool
+from functools import partial
 
 
 import open3d as o3d
@@ -11,7 +13,7 @@ import laspy
 import torch
 from torch_geometric.data import Data, Dataset
 from torch_points3d.metrics.segmentation_tracker import SegmentationTracker
-from torch_points3d.core.data_transform.polygon import LazPreprocessing
+from torch_points3d.core.data_transform.polygon import HoughLinePre
 from torch_points3d.core.data_transform.outlier_removal_o3d import OutlierDetection
 import ipdb
 
@@ -21,8 +23,14 @@ CLASSES = ["others", "wire_conductor"]
 # CLASSES = ["Ground", "High Veg", "Building", "combined"]
 from torch_points3d.datasets.base_dataset import BaseDataset
 
+def polygon_worker(outlier_clf: OutlierDetection,hough_line_pre: HoughLinePre, new_laz_dir: Path, filename:str ):
+    new_laz = hough_line_pre(filename)
+    new_laz = outlier_clf.RemoveOutliersFromLas(new_laz)
+    new_laz.write(str(new_laz_dir)+'/'+filename+".laz", do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
+
+
 class Denmark(Dataset):
-    def __init__(self, root, pdal_env, pdal_script_path, pdal_workers, pdal_height, 
+    def __init__(self, root, processed_folder,
                  polygon_param, outlier_param, split, block_size, overlap: float,
                  global_z=None, transform=None, pre_transform=None, pre_filter=None):
         #ipdb.set_trace()
@@ -43,16 +51,11 @@ class Denmark(Dataset):
 
         self.n_classes = len(CLASSES)
 
-
-        self.pdal_env = pdal_env
-        self.pdal_script_path = pdal_script_path
-        self.pdal_workers = pdal_workers
-        self.pdal_height = pdal_height
         self.polygon_param = polygon_param
         self.outlier_param = outlier_param
 
 
-        self.processed_split_folder = (Path(root) / "processed" / f"{split}_{overlap}_{block_size}")
+        self.processed_split_folder = (Path(root) / str(processed_folder) / f"{split}_{overlap}_{block_size}")
         #ipdb.set_trace()
         super(Denmark, self).__init__(
             root, transform, pre_transform, pre_filter
@@ -75,7 +78,7 @@ class Denmark(Dataset):
         # ## process data
         #ipdb.set_trace()
         print(f"processing {self.split} split")
-        self.processed_split_folder.mkdir(exist_ok=True)
+        self.processed_split_folder.mkdir(exist_ok=True, parents=True)
         room_points, room_labels = [], []
         room_coord_min, room_coord_max = [], []
         room_names = []
@@ -100,13 +103,34 @@ class Denmark(Dataset):
 
         outlier_clf = OutlierDetection(voxel_size=self.outlier_param["voxel_size"],
                                         nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
-        for file in tqdm(file_names):
-            pre = LazPreprocessing(path_to_data=str(path_to_data), filename=file, 
+        pre = HoughLinePre(path_to_data=str(path_to_data), 
                 canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
                 hough_lines_treshold=self.polygon_param["hough_lines_treshold"], max_line_gap=self.polygon_param["max_line_gap"],
                 min_line_length=self.polygon_param["min_line_length"], meters_around_line=self.polygon_param["meters_around_line"],
                 cc_area=self.polygon_param["cc_area"], simplify_tolerance=self.polygon_param["simplify_tolerance"])
-            new_laz = pre()
+
+        func = partial(polygon_worker, outlier_clf, pre, new_laz_dir)
+
+        # with Pool(1) as p:
+        #     # results = tqdm(
+        #     #     p.imap_unordered(worker, onlyfiles),
+        #     #     total=len(onlyfiles),
+        #     # )  # 'total' is redundant here but can be useful
+        #     # when the size of the iterable is unobvious
+        #     p.map(func, file_names)
+        #     # for result in results:
+        #     #     print(result)
+
+        outlier_clf = OutlierDetection(voxel_size=self.outlier_param["voxel_size"],
+                                        nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
+        for file in file_names:
+        #for file in tqdm(file_names):
+            pre = HoughLinePre(path_to_data=str(path_to_data),
+                canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
+                hough_lines_treshold=self.polygon_param["hough_lines_treshold"], max_line_gap=self.polygon_param["max_line_gap"],
+                min_line_length=self.polygon_param["min_line_length"], meters_around_line=self.polygon_param["meters_around_line"],
+                cc_area=self.polygon_param["cc_area"], simplify_tolerance=self.polygon_param["simplify_tolerance"])
+            new_laz = pre(file)
             new_laz = outlier_clf.RemoveOutliersFromLas(new_laz)
             new_laz.write(str(new_laz_dir)+'/'+file+".laz", do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
         # load all room data
@@ -222,10 +246,11 @@ class Denmark(Dataset):
                 if len(point_idx) > 0:
                     points = room_points[room_i][point_idx]
                     labels = room_labels[room_i][point_idx]
+                    room_name = room_names[room_i]
     
                     torch.save({"filename": room_name, "coord_min": coord_min, "coord_max":coord_max,
                                 "points": points, "labels": labels, "room_idx": room_i, "part_i": i, "part_j": j},
-                                self.processed_split_folder / f"{room_name}_cloud_{counter}.pt")
+                                self.processed_split_folder / f"{room_name}_{counter}_cloud_{counter}.pt")
                     counter += 1
             # TODO test how many points are actually in the partitions and merge/expand them if necessary
         stats = {
@@ -352,9 +377,7 @@ class DenmarkDataset(BaseDataset):
         outlier_param["std_ratio"] = dataset_opt.outlier_std_ratio
 
         self.train_dataset = Denmark(
-            split='train', root=self._data_path,
-            pdal_env= dataset_opt.pdal_env, pdal_script_path= dataset_opt.pdal_script_path, 
-            pdal_workers=dataset_opt.pdal_workers, pdal_height=dataset_opt.pdal_height,
+            split='train', root=self._data_path, processed_folder=dataset_opt.processed_folder,
             polygon_param= polygon_param, outlier_param=outlier_param,
             overlap=dataset_opt.train_overlap, block_size=block_size,
             transform=self.train_transform, pre_transform=self.pre_transform
@@ -364,19 +387,15 @@ class DenmarkDataset(BaseDataset):
 
 
         self.val_dataset = Denmark(
-            split='val', root=self._data_path, pdal_env= dataset_opt.pdal_env,
-            pdal_script_path= dataset_opt.pdal_script_path, polygon_param= polygon_param,
-            outlier_param=outlier_param, overlap=0,
-            pdal_workers=dataset_opt.pdal_workers, pdal_height=dataset_opt.pdal_height, 
+            split='val', root=self._data_path, processed_folder=dataset_opt.processed_folder,
+            polygon_param= polygon_param, outlier_param=outlier_param, overlap=0,
             block_size=block_size, global_z=self.train_dataset.global_z,
             transform=self.val_transform, pre_transform=self.pre_transform
         )
 
         self.test_dataset = Denmark(
-            split='test', root=self._data_path, pdal_env= dataset_opt.pdal_env,
-            pdal_script_path= dataset_opt.pdal_script_path, polygon_param= polygon_param,
-            outlier_param=outlier_param, overlap=0,
-            pdal_workers=dataset_opt.pdal_workers, pdal_height=dataset_opt.pdal_height,
+            split='test', root=self._data_path, processed_folder=dataset_opt.processed_folder,
+            polygon_param= polygon_param, outlier_param=outlier_param, overlap=0,
             block_size=block_size, global_z=self.train_dataset.global_z,
             transform=self.test_transform, pre_transform=self.pre_transform
         )

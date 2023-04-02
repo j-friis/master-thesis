@@ -5,7 +5,7 @@ defaults:
 class: denmark_pl_attention.DenmarkDataset
 name: "Denmark"
 task: segmentation
-dataroot: /home/dmn774/data/Deep1/SegmentationDenmark/Lidar_tiles_KU/Powerlines/exp_2205/
+dataroot: /home/jf/msc_data
 processed_folder: "processed_var_1"
 use_category: False
 visualization: True

@@ -8,11 +8,11 @@ from rasterio.features import shapes
 from matplotlib.path import Path as plt_path
 import ipdb
 
-class LazPreprocessing(object):
+class HoughLinePre(object):
 
-    def __init__(self, path_to_data, filename, canny_lower=19, canny_upper=101, hough_lines_treshold=30, max_line_gap=6, min_line_length=12, meters_around_line=10, cc_area=1500, simplify_tolerance=8):
+    def __init__(self, path_to_data, canny_lower=19, canny_upper=101, hough_lines_treshold=30, max_line_gap=6, min_line_length=12, meters_around_line=10, cc_area=1500, simplify_tolerance=8):
         self.path_to_data = path_to_data
-        self.filename = filename
+        #self.filename = filename
         self.canny_lower = canny_lower
         self.canny_upper = canny_upper
         self.hough_lines_treshold = hough_lines_treshold
@@ -22,17 +22,17 @@ class LazPreprocessing(object):
         self.cc_area = cc_area
         self.simplify_tolerance = simplify_tolerance
 
-    def __call__(self):
-        lines_image = self.ImageProcessing()
+    def __call__(self, filename):
+        lines_image = self.ImageProcessing(filename)
         reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons = self.Polygonize(lines_image)
-        point_cloud = laspy.read(self.path_to_data+'/LazFilesWithHeightParam/'+self.filename+'_hag_nn.laz', laz_backend=laspy.compression.LazBackend.LazrsParallel)
+        point_cloud = laspy.read(self.path_to_data+'/LazFilesWithHeightParam/'+filename+'_hag_nn.laz', laz_backend=laspy.compression.LazBackend.LazrsParallel)
         indexes_needed = self.FilterPolygons(reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, point_cloud, lines_image)
         new_las = self.Predictions(indexes_needed, point_cloud)
         return new_las
 
-    def ImageProcessing(self):
+    def ImageProcessing(self, filename):
         # Load Image
-        image = cv2.imread(self.path_to_data+'/ImagesGroundRemoved/'+self.filename+'_max.tif', cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(self.path_to_data+'/ImagesGroundRemoved/'+filename+'_max.tif', cv2.IMREAD_UNCHANGED)
         image = np.where(image >= 0, image, 0)
         image = image/np.max(image)
         image = (image*255).astype(np.uint8)
