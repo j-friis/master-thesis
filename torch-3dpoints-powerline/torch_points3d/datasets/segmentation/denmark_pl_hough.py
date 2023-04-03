@@ -84,14 +84,6 @@ class Denmark(Dataset):
         room_names = []
         n_point_rooms = []
 
-        #Runing pdal pipeline
-        # print("Runing pdal pipeline")
-        # cmd = f'. ~/miniconda3/etc/profile.d/conda.sh {self.pdal_script_path} {str(Path(self.raw_dir) / self.split)} {self.pdal_workers} {self.pdal_height}'
-        # subprocess_cmd = shlex.split(cmd)
-        # my_subprocess = subprocess.run(subprocess_cmd, stdout=subprocess.DEVNULL)
-
-        #ipdb.set_trace()
-
         file_names = [f.stem for f in self.raw_file_names]
         # load all room data
         new_laz_dir = Path(self.raw_dir).joinpath(self.split).joinpath("NewLaz")
@@ -99,62 +91,58 @@ class Denmark(Dataset):
         path_to_data = Path(self.raw_dir) / self.split
         #ipdb.set_trace()
 
-        print("Runing polygon")
+        # print("Runing polygon")
+
+        # outlier_clf = OutlierDetection(voxel_size=self.outlier_param["voxel_size"],
+        #                                 nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
+        # pre = HoughLinePre(path_to_data=str(path_to_data), 
+        #         canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
+        #         hough_lines_treshold=self.polygon_param["hough_lines_treshold"], max_line_gap=self.polygon_param["max_line_gap"],
+        #         min_line_length=self.polygon_param["min_line_length"], meters_around_line=self.polygon_param["meters_around_line"],
+        #         cc_area=self.polygon_param["cc_area"], simplify_tolerance=self.polygon_param["simplify_tolerance"])
+
+        # func = partial(polygon_worker, outlier_clf, pre, new_laz_dir)
+
+        # # with Pool(1) as p:
+        # #     # results = tqdm(
+        # #     #     p.imap_unordered(worker, onlyfiles),
+        # #     #     total=len(onlyfiles),
+        # #     # )  # 'total' is redundant here but can be useful
+        # #     # when the size of the iterable is unobvious
+        # #     p.map(func, file_names)
+        # #     # for result in results:
+        # #     #     print(result)
 
         outlier_clf = OutlierDetection(voxel_size=self.outlier_param["voxel_size"],
                                         nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
-        pre = HoughLinePre(path_to_data=str(path_to_data), 
+        pre = HoughLinePre(path_to_data=str(path_to_data),
                 canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
                 hough_lines_treshold=self.polygon_param["hough_lines_treshold"], max_line_gap=self.polygon_param["max_line_gap"],
                 min_line_length=self.polygon_param["min_line_length"], meters_around_line=self.polygon_param["meters_around_line"],
                 cc_area=self.polygon_param["cc_area"], simplify_tolerance=self.polygon_param["simplify_tolerance"])
 
-        func = partial(polygon_worker, outlier_clf, pre, new_laz_dir)
-
-        # with Pool(1) as p:
-        #     # results = tqdm(
-        #     #     p.imap_unordered(worker, onlyfiles),
-        #     #     total=len(onlyfiles),
-        #     # )  # 'total' is redundant here but can be useful
-        #     # when the size of the iterable is unobvious
-        #     p.map(func, file_names)
-        #     # for result in results:
-        #     #     print(result)
-
-        outlier_clf = OutlierDetection(voxel_size=self.outlier_param["voxel_size"],
-                                        nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
         for file in file_names:
         #for file in tqdm(file_names):
-            pre = HoughLinePre(path_to_data=str(path_to_data),
-                canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
-                hough_lines_treshold=self.polygon_param["hough_lines_treshold"], max_line_gap=self.polygon_param["max_line_gap"],
-                min_line_length=self.polygon_param["min_line_length"], meters_around_line=self.polygon_param["meters_around_line"],
-                cc_area=self.polygon_param["cc_area"], simplify_tolerance=self.polygon_param["simplify_tolerance"])
             new_laz = pre(file)
             new_laz = outlier_clf.RemoveOutliersFromLas(new_laz)
             new_laz.write(str(new_laz_dir)+'/'+file+".laz", do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
-        # load all room data
+        # # load all room data
+        #ipdb.set_trace()
 
         new_laz_files = new_laz_dir.glob("*.laz")
+        #print(list(new_laz_dir.glob("*.laz")))
 
         for room_path in tqdm(new_laz_files):
             #print(room_path)
             room_name = room_path.stem
 
-            # codes for three classes
-            # load data (pandas is way faster than numpy in this regard)
-            # for read *txt files
-            # room_data = pd.read_csv(room_path, sep=" ", header=None)  # xyzc, N*4
-
-            #room_data = laspy.read(room_path)
             # TODO modify the laspy for reading the version
             try:
-                # room_data = laspy.read(room_path, laz_backend=laspy.LazBackend)
                 room_data = laspy.read(room_path, laz_backend=laspy.compression.LazBackend.LazrsParallel)
             except Exception as e:
                 continue
-            # room_data = room_data.values
-            room_data = np.stack([room_data.x, room_data.y, room_data.z, room_data.classification], 1)
+
+            room_data = np.stack([room_data.X, room_data.Y, room_data.Z, room_data.classification], 1).astype(np.float64)
 
             # split into points and labels
             points, tmp_labels = room_data[:, :-1], room_data[:, -1]  # xyzc, N*4
@@ -162,10 +150,6 @@ class Denmark(Dataset):
             # labels = tmp_labels
             labels = np.zeros_like(tmp_labels)
 
-            # labels[~(hig_veg | building | ground)] = 3  # rest
-
-            # modify for new dataset
-            #ipdb.set_trace()
             if 14 not in tmp_labels:
                 continue
 
@@ -207,7 +191,10 @@ class Denmark(Dataset):
             room_coord_max.append(coord_max)
             room_names.append(room_name)
             n_point_rooms.append(labels.size)
+
         assert len(n_point_rooms) > 0, f"No data at {str(Path(self.raw_dir) / self.split)}"
+        #ipdb.set_trace()
+
         # give global_z from training set
         global_z = self.global_z
         if global_z is None:
@@ -215,9 +202,11 @@ class Denmark(Dataset):
             diff = np.array(room_coord_max)[:, 2] - np.array(room_coord_min)[:, 2]
             max_room = np.argmax(diff, 0)
             global_z = np.array(room_coord_min)[max_room, 2], np.array(room_coord_max)[max_room, 2]
+        
         min_z, max_z = global_z
         block_scale = np.concatenate([self.block_size, [1.]])
         room_coord_scale = []
+
         for points, coord_min, coord_max in zip(room_points, room_coord_min, room_coord_max):
             # override local z with global z
             coord_min[2] = min_z
@@ -232,6 +221,8 @@ class Denmark(Dataset):
             room_coord_scale.append(room_scale * block_scale)
 
         print(f"saving processed {self.split} split")
+        #ipdb.set_trace()
+
         # partition rooms
         # each room is scaled between 0 and 1 so just try to have similar point counts
         counter = 0
@@ -386,12 +377,12 @@ class DenmarkDataset(BaseDataset):
         # print(self.train_dataset.weight_classes)
 
 
-        self.val_dataset = Denmark(
-            split='val', root=self._data_path, processed_folder=dataset_opt.processed_folder,
-            polygon_param= polygon_param, outlier_param=outlier_param, overlap=0,
-            block_size=block_size, global_z=self.train_dataset.global_z,
-            transform=self.val_transform, pre_transform=self.pre_transform
-        )
+        # self.val_dataset = Denmark(
+        #     split='val', root=self._data_path, processed_folder=dataset_opt.processed_folder,
+        #     polygon_param= polygon_param, outlier_param=outlier_param, overlap=0,
+        #     block_size=block_size, global_z=self.train_dataset.global_z,
+        #     transform=self.val_transform, pre_transform=self.pre_transform
+        # )
 
         self.test_dataset = Denmark(
             split='test', root=self._data_path, processed_folder=dataset_opt.processed_folder,
