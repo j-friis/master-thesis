@@ -138,7 +138,7 @@ class Denmark(Dataset):
         new_laz_files = new_laz_dir.glob("*.laz")
 
         for room_path in tqdm(new_laz_files):
-            print(room_path)
+            #print(room_path)
             room_name = room_path.stem
 
             # codes for three classes
@@ -250,7 +250,7 @@ class Denmark(Dataset):
     
                     torch.save({"filename": room_name, "coord_min": coord_min, "coord_max":coord_max,
                                 "points": points, "labels": labels, "room_idx": room_i, "part_i": i, "part_j": j},
-                                self.processed_split_folder / f"{room_name}_{counter}_cloud_{counter}.pt")
+                                self.processed_split_folder / f"{room_name}_cloud_{counter}.pt")
                     counter += 1
             # TODO test how many points are actually in the partitions and merge/expand them if necessary
         stats = {
