@@ -373,16 +373,13 @@ class DenmarkDataset(BaseDataset):
             overlap=dataset_opt.train_overlap, block_size=block_size,
             transform=self.train_transform, pre_transform=self.pre_transform
         )
-        # self.train_dataset.add_weights(class_weight_method="log")
-        # print(self.train_dataset.weight_classes)
 
-
-        # self.val_dataset = Denmark(
-        #     split='val', root=self._data_path, processed_folder=dataset_opt.processed_folder,
-        #     polygon_param= polygon_param, outlier_param=outlier_param, overlap=0,
-        #     block_size=block_size, global_z=self.train_dataset.global_z,
-        #     transform=self.val_transform, pre_transform=self.pre_transform
-        # )
+        self.val_dataset = Denmark(
+            split='val', root=self._data_path, processed_folder=dataset_opt.processed_folder,
+            polygon_param= polygon_param, outlier_param=outlier_param, overlap=0,
+            block_size=block_size, global_z=self.train_dataset.global_z,
+            transform=self.val_transform, pre_transform=self.pre_transform
+         )
 
         self.test_dataset = Denmark(
             split='test', root=self._data_path, processed_folder=dataset_opt.processed_folder,
