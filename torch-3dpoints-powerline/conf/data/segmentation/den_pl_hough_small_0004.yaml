@@ -5,7 +5,7 @@ defaults:
 class: denmark_pl_hough.DenmarkDataset
 name: "Denmark"
 task: segmentation
-dataroot: /home/frederik/data/
+dataroot: /home/xdr476/data
 processed_folder: "processed_hough_0004"
 use_category: False
 visualization: True
