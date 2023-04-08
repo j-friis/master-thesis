@@ -14,6 +14,9 @@ echo "Load module cuda/11.3"
 module load cuda/11.3
 echo "Install started by xdr476"
 
+export CUDA_HOME=/opt/software/cuda/11.3
+echo $CUDA_HOME
+
 pip install numpy==1.20.3
 pip install pandas
 pip install wandb
