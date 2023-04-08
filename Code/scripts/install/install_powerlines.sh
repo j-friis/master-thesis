@@ -1,7 +1,7 @@
 #!/bin/bash
 #BATCH --job-name=install
 #SBATCH --ntasks=1 --cpus-per-task=4 --mem=10000M
-#SBATCH -p gpu --gres=gpu:titanrtx:1
+#SBATCH -p gpu --gres=gpu:a100:1
 #SBATCH --time=4-00:00:00
 TORCH_CUDA_ARCH_LIST="3.5 5.2 6.0 6.1 7.0+PTX"
 echo "$TORCH_CUDA_ARCH_LIST"
