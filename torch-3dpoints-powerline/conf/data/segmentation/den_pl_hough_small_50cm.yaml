@@ -6,7 +6,7 @@ class: denmark_pl_hough.DenmarkDataset
 name: "Denmark"
 task: segmentation
 dataroot: /home/xdr476/data
-processed_folder: "processed_hough_20cm"
+processed_folder: "processed_hough_50cm"
 use_category: False
 visualization: True
 class_weights: log
