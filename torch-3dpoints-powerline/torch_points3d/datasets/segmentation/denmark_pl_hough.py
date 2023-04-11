@@ -33,7 +33,6 @@ class Denmark(Dataset):
     def __init__(self, root, processed_folder,
                  polygon_param, outlier_param, split, block_size, overlap: float,
                  global_z=None, transform=None, pre_transform=None, pre_filter=None):
-        #ipdb.set_trace()
         
         self.processed_file_names_ = []
         # init some constant to know label names
@@ -76,7 +75,6 @@ class Denmark(Dataset):
 
     def process(self):
         # ## process data
-        #ipdb.set_trace()
         print(f"processing {self.split} split")
         self.processed_split_folder.mkdir(exist_ok=True, parents=True)
         room_points, room_labels = [], []
@@ -89,7 +87,6 @@ class Denmark(Dataset):
         new_laz_dir = Path(self.raw_dir).joinpath(self.split).joinpath("NewLaz")
         new_laz_dir.mkdir(exist_ok=True)
         path_to_data = Path(self.raw_dir) / self.split
-        #ipdb.set_trace()
 
         # print("Runing polygon")
 
@@ -126,11 +123,9 @@ class Denmark(Dataset):
             new_laz = pre(file)
             new_laz = outlier_clf.RemoveOutliersFromLas(new_laz)
             new_laz.write(str(new_laz_dir)+'/'+file+".laz", do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
-        # # load all room data
-        #ipdb.set_trace()
 
+        # load all room data
         new_laz_files = new_laz_dir.glob("*.laz")
-        #print(list(new_laz_dir.glob("*.laz")))
 
         for room_path in tqdm(new_laz_files):
             #print(room_path)
@@ -192,8 +187,7 @@ class Denmark(Dataset):
             room_names.append(room_name)
             n_point_rooms.append(labels.size)
 
-        assert len(n_point_rooms) > 0, f"No data at {str(Path(self.raw_dir) / self.split)}"
-        #ipdb.set_trace()
+        # assert len(n_point_rooms) > 0, f"No data at {str(Path(self.raw_dir) / self.split)}"
 
         # give global_z from training set
         global_z = self.global_z
@@ -221,7 +215,6 @@ class Denmark(Dataset):
             room_coord_scale.append(room_scale * block_scale)
 
         print(f"saving processed {self.split} split")
-        #ipdb.set_trace()
 
         # partition rooms
         # each room is scaled between 0 and 1 so just try to have similar point counts
@@ -270,7 +263,6 @@ class Denmark(Dataset):
 
         # data = Data(x=features, y=labels, pos=points).detach()
         data = Data( y=labels, pos=points)
-        # ipdb.set_trace()
 
         return data
 
@@ -324,7 +316,6 @@ class Denmark(Dataset):
 
 def center_block(points):
     # center the samples around the center point
-    # ipdb.set_trace()
     selected_points = np.copy(points)  # make sure we work on a copy
     selected_points -= np.median(selected_points, 0)
 
