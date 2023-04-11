@@ -4,18 +4,9 @@ import glob
 from pathlib import Path
 import os
 import numpy as np
-from sklearn.neighbors import NearestNeighbors as NN
 import glob
-import pandas as pd
-import ipdb
-import laspy
-import open3d as o3d
-from tqdm.notebook import tqdm
 
 ## import the model tools
-from torch_geometric.transforms import Compose
-from torch_points3d.core.data_transform import MinPoints,XYZFeature, AddFeatsByKeys, GridSampling3D
-from torch_points3d.applications.pretrained_api import PretainedRegistry
 from torch_geometric.data import Batch, Dataset, Data ,DataLoader
 from nearst_neighbors import get_nearest_neighbors
 def predict(room_info, model, transform_test, test_folder, vis_folder):

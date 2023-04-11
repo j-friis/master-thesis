@@ -1,7 +1,5 @@
 ## import the tools
 import torch
-from sklearn.neighbors import NearestNeighbors as NN
-from tqdm.notebook import tqdm
 
 ## import the model tools
 from torch_geometric.transforms import Compose
