@@ -55,7 +55,6 @@ class Denmark(Dataset):
 
 
         self.processed_split_folder = (Path(root) / str(processed_folder) / f"{split}_{overlap}_{block_size}")
-        #ipdb.set_trace()
         super(Denmark, self).__init__(
             root, transform, pre_transform, pre_filter
         )
@@ -215,6 +214,7 @@ class Denmark(Dataset):
             room_coord_scale.append(room_scale * block_scale)
 
         print(f"saving processed {self.split} split")
+        # ipdb.set_trace()
 
         # partition rooms
         # each room is scaled between 0 and 1 so just try to have similar point counts
