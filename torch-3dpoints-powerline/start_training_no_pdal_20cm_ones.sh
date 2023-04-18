@@ -10,6 +10,7 @@ module load cuda/11.3
 eval "$(conda shell.bash hook)"
 conda activate powerlines
 bash seg_sh/sb_train_denmank_pl_hough_20cm_ones.sh
+python -c "import MinkowskiEngine as ME; ME.print_diagnostics()"
 
 
 
