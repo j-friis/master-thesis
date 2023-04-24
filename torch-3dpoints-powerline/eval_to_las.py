@@ -77,8 +77,11 @@ def predict(room_info, model, transform_test, test_folder, vis_folder):
         room_coord_scale = room_coord_scales[room_index]
         pos_ = pt_data['points']
         pt_ori = pos_ * room_coord_scale + room_coord_mins[room_index]
-        data_s = transform_test(Batch(pos=torch.from_numpy(pos_).float(), batch=torch.zeros(pos_.shape[0]).long()))
-        data_s.y = torch.zeros(data_s.batch.shape).long()
+        # data_s = transform_test(Batch(pos=torch.from_numpy(pos_).float(), batch=torch.zeros(pos_.shape[0]).long()))
+        # data_s.y = torch.zeros(data_s.batch.shape).long()
+        data_s = transform_test(Batch(pos=torch.from_numpy(pos_).float()))
+        data_s.batch = torch.zeros(len(data_s.pos))
+        data_s.y = torch.zeros(data_s.pos.shape[0]).long()
         f = get_nearest_neighbors(pos_, data_s.pos)
 
 
