@@ -59,30 +59,27 @@ def load_model(model_path: str, data_path: str):
     return model_pl, transform_test, model['run_config']['data']
 
 
-def predict(room_info, model, transform_test, test_folder, vis_folder):
+def predict(room_info, model, filename, transform_test, test_folder):
     ## loop for every files
-    room_names = room_info['room_names']
     room_coord_mins = room_info['room_coord_min']
     room_coord_scales = room_info['room_coord_scale']
-    files = list(glob.glob(test_folder + "/*cloud*pt"))
+    files = list(glob.glob(test_folder + f"/*{filename}*cloud*pt"))
+
+    pred_data = []
 
     for file in files:
         sample = os.path.join(test_folder, file)
         pt_data = torch.load(sample)
         room_index = pt_data['room_idx']
-        room_name = room_names[room_index]
-        vis_out = os.path.join(vis_folder, room_name)
-        Path(vis_folder).mkdir(exist_ok=True, parents=True)
 
         room_coord_scale = room_coord_scales[room_index]
         pos_ = pt_data['points']
-        pt_ori = pos_ * room_coord_scale + room_coord_mins[room_index]
-        # data_s = transform_test(Batch(pos=torch.from_numpy(pos_).float(), batch=torch.zeros(pos_.shape[0]).long()))
-        # data_s.y = torch.zeros(data_s.batch.shape).long()
+        point_in_original_las = pos_ * room_coord_scale + room_coord_mins[room_index]
+
         data_s = transform_test(Batch(pos=torch.from_numpy(pos_).float()))
         data_s.batch = torch.zeros(len(data_s.pos))
         data_s.y = torch.zeros(data_s.pos.shape[0]).long()
-        f = get_nearest_neighbors(pos_, data_s.pos)
+        index_to_nearst_neighbor = get_nearest_neighbors(pos_, data_s.pos)
 
 
         with torch.no_grad():
@@ -98,49 +95,24 @@ def predict(room_info, model, transform_test, test_folder, vis_folder):
             pre_ori[0] = cla_pre[0]
         else:
             for i in pre_ori:
-                pre_ori[i] = cla_pre[f[i]]
-        combine_pre = np.column_stack((pt_ori, pre_ori.T))
+                pre_ori[i] = cla_pre[index_to_nearst_neighbor[i]]
+        combine_pre = np.column_stack((point_in_original_las, pre_ori.T))
 
-        vis_out_file = vis_out +'pre.txt'
-        if os.path.exists(vis_out_file):
-            file_save = open(vis_out_file, 'a')
-        else:
-            file_save = open(vis_out_file, 'w')
+        pred_data.append(combine_pre)
 
-        file_save = open(vis_out_file, 'a')
-        np.savetxt(file_save, combine_pre, fmt = '%1.5f')
-    print("save finished")
+    pred_data = np.array([item for sublist in pred_data for item in sublist])
 
+    return pred_data
 
-def add_predection_to_laz_files(filename, data_root_path, vis_folder, processed_folder_name):
-    ## read path
-    pred_path = os.path.join(vis_folder, filename+"pre.txt")
-    pred_data = pd.read_csv(pred_path, sep=" ", header=None).values
-
+def add_predection_to_laz_files(filename, data_root_path, pred_data, processed_folder_name):
+    ## read original las file
     normal_laz_file = os.path.join(data_root_path, "raw", "test",filename+".laz")
-    processed_laz_file = os.path.join(data_root_path, "raw", "test", "NewLaz", filename+".laz")
 
     non_processed_laz = laspy.read(normal_laz_file, laz_backend=laspy.compression.LazBackend.LazrsParallel)
-    processed_laz = laspy.read(processed_laz_file, laz_backend=laspy.compression.LazBackend.LazrsParallel)
     non_processed_point_data = np.stack([non_processed_laz.X, non_processed_laz.Y, non_processed_laz.Z], axis=0).transpose((1, 0))
-    processed_point_data = np.stack([processed_laz.X, processed_laz.Y, processed_laz.Z], axis=0).transpose((1, 0))
-
 
     powerline_pts = pred_data[np.where(pred_data[:,3] == 1)].copy()
     powerline_pts_coord = powerline_pts[:,:-1].astype(np.int32) 
-
-    # print(f"There are {pred_data.shape} points in the las file")
-    # print(f"There are {pred_data.shape} points from the pt files")
-
-    # print(powerline_pts_coord[:10])
-    # print(processed_point_data[:10])
-
-    # print(f"laz data x max {np.max(processed_point_data[:,0])}")
-    # print(f"pt x max {np.max(powerline_pts_coord[:,0])}")
-    # print(f"laz data y max {np.max(processed_point_data[:,1])}")
-    # print(f"pt y max {np.max(powerline_pts_coord[:,1])}")
-    # print(f"laz data z max {np.max(processed_point_data[:,2])}")
-    # print(f"pt z max {np.max(powerline_pts_coord[:,2])}")
 
     non_processed_laz.add_extra_dim(laspy.ExtraBytesParams(
         name="prediction",
@@ -154,10 +126,10 @@ def add_predection_to_laz_files(filename, data_root_path, vis_folder, processed_
     non_processed_laz.prediction = pred
 
     processed_data_root_path = os.path.join(data_root_path, processed_folder_name)
-    eval_folder = os.path.join(processed_data_root_path, "eval")
+    eval_folder = processed_data_root_path + "/eval" 
     Path(eval_folder).mkdir(exist_ok=True, parents=True)
     eval_file_name = os.path.join(eval_folder, filename+".laz")
-    non_processed_laz.write(str(eval_file_name), do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
+    non_processed_laz.write(str(eval_file_name), do_compress = True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Eval entire folder.')
@@ -168,7 +140,8 @@ if __name__ == "__main__":
     data_path = args.folder
     model_path = args.model
 
-    # data_path = "/home/jf/msc_data"
+    # data_path = "/home/jf/data"
+    # # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-18/12-08-50/SEUNet18.pt"
     # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-09/13-31-16/SEUnet1850Metersblock50cmvoxel.pt"
 
     model, transform_test, config = load_model(model_path, data_path)
@@ -180,10 +153,9 @@ if __name__ == "__main__":
     test_folder_name = f"test_0_({config['block_size_x']}, {config['block_size_y']})"
     test_folder = os.path.join(processed_data_root_path, test_folder_name)
     pre_trans_path = os.path.join(test_folder, "stats.pt")
-    vis_folder =  os.path.join(processed_data_root_path, 'vis')
-    #Path(vis_folder).mkdir(exist_ok=True, parents=True)
-
     room_info = torch.load(pre_trans_path)
-    predict(room_info, model, transform_test, test_folder, vis_folder)
+    
     for filename in room_info['room_names']:
-        add_predection_to_laz_files(filename,data_root_path, vis_folder,processed_folder_name)
+        print(f"Predecting on {filename}")
+        pred_data = predict(room_info, model, filename, transform_test, test_folder)
+        add_predection_to_laz_files(filename, data_root_path, pred_data, processed_folder_name)
