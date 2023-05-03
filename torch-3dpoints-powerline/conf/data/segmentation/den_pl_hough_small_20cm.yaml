@@ -10,10 +10,10 @@ processed_folder: "processed_hough_20cm"
 use_category: False
 visualization: True
 class_weights: log
-first_subsampling: 0.004 #0.04 for 50m
+first_subsampling: 0.008 #0.04 for 50m
 train_overlap: 0.25
-block_size_x: 0.05  # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05
-block_size_y: 0.05 # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05
+block_size_x: 0.025  # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05
+block_size_y: 0.025 # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05
 canny_lower: 19
 canny_upper: 101
 cc_area: 1500
