@@ -15,9 +15,11 @@ import torch
 from sklearn.neighbors import KDTree
 import numpy as np
 
+
 ## import the model tools
 from torch_geometric.transforms import Compose
 from torch_points3d.core.data_transform import MinPoints,XYZFeature, AddFeatsByKeys, GridSampling3D
+from torch_points3d.core.data_transform.features import AddOnes
 from torch_points3d.applications.pretrained_api import PretainedRegistry
 from torch_geometric.data import Batch
 
@@ -41,21 +43,34 @@ def load_model(model_path: str, data_path: str):
     model = torch.load(model_path)
     model['run_config']['data']['dataroot'] = data_path
     torch.save(model, model_path)
+    print(model['run_config']["data"])
     print(model['run_config']["data"]["train_transform"])
-    ## transformer
-    pos_z = [ "pos_z" ]
+
+    ## transformer for non ones
+    # pos_z = [ "pos_z" ]
+    # list_add_to_x = [ True ]
+    # delete_feats = [ True ]
+    # first_subsampling = model['run_config']["data"]["first_subsampling"]
+    # transform_test = Compose([MinPoints(512),
+    #                     XYZFeature(add_x=False, add_y=False, add_z= True),
+    #                     AddFeatsByKeys(list_add_to_x=list_add_to_x, feat_names= pos_z,delete_feats=delete_feats),
+    #                     GridSampling3D(mode='last', size=first_subsampling, quantize_coords=True)
+    #                     ])
+
+    ## transformer for ones
+    pos_z = [ "ones" ]
     list_add_to_x = [ True ]
     delete_feats = [ True ]
-    lparams = ['512']
-
     first_subsampling = model['run_config']["data"]["first_subsampling"]
-    transform_test = Compose([MinPoints(512),
-                        XYZFeature(add_x=False, add_y=False, add_z= True),
-                        AddFeatsByKeys(list_add_to_x=list_add_to_x, feat_names= pos_z,delete_feats=delete_feats),
-                        GridSampling3D(mode='last', size=first_subsampling, quantize_coords=True)
-                        ])
+    input_nc_feats = [1]
 
-    model_pl = PretainedRegistry.from_file(model_path).cuda()
+    transform_test = Compose([MinPoints(512),
+                     AddOnes(),
+                     AddFeatsByKeys(list_add_to_x=list_add_to_x, feat_names= pos_z,delete_feats=delete_feats, input_nc_feats=input_nc_feats),
+                     GridSampling3D(mode='last', size=first_subsampling, quantize_coords=True)
+                     ])
+    ### ['latest', 'loss_seg', 'acc', 'macc', 'miou']
+    model_pl = PretainedRegistry.from_file(model_path, weight_name="miou").cuda()
     return model_pl, transform_test, model['run_config']['data']
 
 
@@ -106,7 +121,7 @@ def predict(room_info, model, filename, transform_test, test_folder):
 
 def add_predection_to_laz_files(filename, data_root_path, pred_data, processed_folder_name):
     ## read original las file
-    normal_laz_file = os.path.join(data_root_path, "raw", "test",filename+".laz")
+    normal_laz_file = os.path.join(data_root_path, "raw", "test", filename+".laz")
 
     non_processed_laz = laspy.read(normal_laz_file, laz_backend=laspy.compression.LazBackend.LazrsParallel)
     non_processed_point_data = np.stack([non_processed_laz.X, non_processed_laz.Y, non_processed_laz.Z], axis=0).transpose((1, 0))
@@ -136,13 +151,14 @@ if __name__ == "__main__":
     parser.add_argument('folder', type=str, help='Folder with laz files to predict on')
     parser.add_argument('model', type=str, help='Path to the model')
 
-    args = parser.parse_args()
-    data_path = args.folder
-    model_path = args.model
+    # args = parser.parse_args()
+    # data_path = args.folder
+    # model_path = args.model
 
-    # data_path = "/home/jf/data"
-    # # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-18/12-08-50/SEUNet18.pt"
-    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-09/13-31-16/SEUnet1850Metersblock50cmvoxel.pt"
+    data_path = "/home/jf/data"
+    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-18/12-08-50/SEUNet18.pt"
+    model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-02/16-01-32/SEUNet18.pt"
+    model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-02/11-26-09/SEUNet18.pt"
 
     model, transform_test, config = load_model(model_path, data_path)
 
