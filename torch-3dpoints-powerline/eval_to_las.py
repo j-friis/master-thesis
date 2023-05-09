@@ -15,11 +15,16 @@ import torch
 from sklearn.neighbors import KDTree
 import numpy as np
 
+
 ## import the model tools
 from torch_geometric.transforms import Compose
-from torch_points3d.core.data_transform import MinPoints,XYZFeature, AddFeatsByKeys, GridSampling3D
+from torch_points3d.core.data_transform import MinPoints, XYZFeature, AddFeatsByKeys, GridSampling3D
+from torch_points3d.core.data_transform.features import AddOnes
 from torch_points3d.applications.pretrained_api import PretainedRegistry
 from torch_geometric.data import Batch
+
+PREDICT_VALUE = "test" # "test"
+
 
 def get_nearest_neighbors(src_points, candidates, k_neighbors=1):
     """Find nearest neighbors for all source points from a set of candidate points"""
@@ -41,34 +46,47 @@ def load_model(model_path: str, data_path: str):
     model = torch.load(model_path)
     model['run_config']['data']['dataroot'] = data_path
     torch.save(model, model_path)
+    print(model['run_config']["data"])
     print(model['run_config']["data"]["train_transform"])
-    ## transformer
-    pos_z = [ "pos_z" ]
+
+    ## transformer for non ones
+    # pos_z = [ "pos_z" ]
+    # list_add_to_x = [ True ]
+    # delete_feats = [ True ]
+    # first_subsampling = model['run_config']["data"]["first_subsampling"]
+    # transform_test = Compose([MinPoints(512),
+    #                     XYZFeature(add_x=False, add_y=False, add_z= True),
+    #                     AddFeatsByKeys(list_add_to_x=list_add_to_x, feat_names= pos_z,delete_feats=delete_feats),
+    #                     GridSampling3D(mode='last', size=first_subsampling, quantize_coords=True)
+    #                     ])
+
+    ## transformer for ones
+    pos_z = [ "ones" ]
     list_add_to_x = [ True ]
     delete_feats = [ True ]
-    lparams = ['512']
-
     first_subsampling = model['run_config']["data"]["first_subsampling"]
-    transform_test = Compose([MinPoints(512),
-                        XYZFeature(add_x=False, add_y=False, add_z= True),
-                        AddFeatsByKeys(list_add_to_x=list_add_to_x, feat_names= pos_z,delete_feats=delete_feats),
-                        GridSampling3D(mode='last', size=first_subsampling, quantize_coords=True)
-                        ])
+    input_nc_feats = [1]
 
-    model_pl = PretainedRegistry.from_file(model_path).cuda()
+    transform_test = Compose([MinPoints(512),
+                     AddOnes(),
+                     AddFeatsByKeys(list_add_to_x=list_add_to_x, feat_names= pos_z,delete_feats=delete_feats, input_nc_feats=input_nc_feats),
+                     GridSampling3D(mode='last', size=first_subsampling, quantize_coords=True)
+                     ])
+    ### ['latest', 'loss_seg', 'acc', 'macc', 'miou']
+    model_pl = PretainedRegistry.from_file(model_path, weight_name="loss_seg").cuda()
     return model_pl, transform_test, model['run_config']['data']
 
 
-def predict(room_info, model, filename, transform_test, test_folder):
+def predict(room_info, model, filename, transform_test, predict_folder):
     ## loop for every files
     room_coord_mins = room_info['room_coord_min']
     room_coord_scales = room_info['room_coord_scale']
-    files = list(glob.glob(test_folder + f"/*{filename}*cloud*pt"))
+    files = list(glob.glob(predict_folder + f"/*{filename}*cloud*pt"))
 
     pred_data = []
 
     for file in files:
-        sample = os.path.join(test_folder, file)
+        sample = os.path.join(predict_folder, file)
         pt_data = torch.load(sample)
         room_index = pt_data['room_idx']
 
@@ -106,7 +124,7 @@ def predict(room_info, model, filename, transform_test, test_folder):
 
 def add_predection_to_laz_files(filename, data_root_path, pred_data, processed_folder_name):
     ## read original las file
-    normal_laz_file = os.path.join(data_root_path, "raw", "test",filename+".laz")
+    normal_laz_file = os.path.join(data_root_path, "raw", PREDICT_VALUE, filename+".laz")
 
     non_processed_laz = laspy.read(normal_laz_file, laz_backend=laspy.compression.LazBackend.LazrsParallel)
     non_processed_point_data = np.stack([non_processed_laz.X, non_processed_laz.Y, non_processed_laz.Z], axis=0).transpose((1, 0))
@@ -129,6 +147,7 @@ def add_predection_to_laz_files(filename, data_root_path, pred_data, processed_f
     eval_folder = processed_data_root_path + "/eval" 
     Path(eval_folder).mkdir(exist_ok=True, parents=True)
     eval_file_name = os.path.join(eval_folder, filename+".laz")
+    
     non_processed_laz.write(str(eval_file_name), do_compress = True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
 
 if __name__ == "__main__":
@@ -136,13 +155,16 @@ if __name__ == "__main__":
     parser.add_argument('folder', type=str, help='Folder with laz files to predict on')
     parser.add_argument('model', type=str, help='Path to the model')
 
-    args = parser.parse_args()
-    data_path = args.folder
-    model_path = args.model
+    # args = parser.parse_args()
+    # data_path = args.folder
+    # model_path = args.model
 
-    # data_path = "/home/jf/data"
-    # # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-18/12-08-50/SEUNet18.pt"
-    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-09/13-31-16/SEUnet1850Metersblock50cmvoxel.pt"
+    data_path = "/home/jf/data"
+    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-18/12-08-50/SEUNet18.pt"
+    model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-02/16-01-32/SEUNet18.pt"
+    model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-02/11-26-09/SEUNet18.pt"
+    model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-07/13-32-19/SEUNet50.pt"
+
 
     model, transform_test, config = load_model(model_path, data_path)
 
@@ -150,12 +172,12 @@ if __name__ == "__main__":
     processed_folder_name = config["processed_folder"] 
     data_root_path = os.path.join(config['dataroot'] , "denmark")
     processed_data_root_path = os.path.join(data_root_path, processed_folder_name)
-    test_folder_name = f"test_0_({config['block_size_x']}, {config['block_size_y']})"
-    test_folder = os.path.join(processed_data_root_path, test_folder_name)
-    pre_trans_path = os.path.join(test_folder, "stats.pt")
+    predict_folder_name = f"{PREDICT_VALUE}_0_({config['block_size_x']}, {config['block_size_y']})"
+    predict_folder = os.path.join(processed_data_root_path, predict_folder_name)
+    pre_trans_path = os.path.join(predict_folder, "stats.pt")
     room_info = torch.load(pre_trans_path)
     
     for filename in room_info['room_names']:
         print(f"Predecting on {filename}")
-        pred_data = predict(room_info, model, filename, transform_test, test_folder)
+        pred_data = predict(room_info, model, filename, transform_test, predict_folder)
         add_predection_to_laz_files(filename, data_root_path, pred_data, processed_folder_name)

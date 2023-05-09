@@ -1,5 +1,5 @@
 #!/bin/bash
-#BATCH --job-name=minkowskiTrain
+#BATCH --job-name=Res
 #SBATCH --ntasks=1 --cpus-per-task=12 --mem=64000M
 #SBATCH -p gpu --gres=gpu:a100:1
 #SBATCH --time=2-00:00:00
