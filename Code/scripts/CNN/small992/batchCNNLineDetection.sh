@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=nxw500cnn
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=24000
-#SBATCH -p gpu --gres=gpu:titanx:1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64000
+#SBATCH -p gpu --gres=gpu:a100:1
 #SBATCH --time=1-00:00:00
 
 echo "Training Started"
@@ -24,5 +24,4 @@ python -c "import torch; torch.cuda.get_device_name(0)"
 
 echo "CNN Started"
 echo "Training started by nxw500"
-python CNN-LineDetectionLarge.py
-
+python CNN-LineDetection.py

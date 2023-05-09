@@ -66,10 +66,18 @@ for num, path in enumerate(path_tuples):
     image = (image*255).astype(np.uint8)
     
     image = Image.fromarray(image)
-    transformed_image = transform_img_gray(image)
-    _, x_pixels, y_pixels = transformed_image.shape
-    trainingImages.append(transform_img_gray(image))
+    image_rotated90 = image.rotate(90, expand=False)
+    image_rotated180 = image.rotate(180, expand=False)
+    image_rotated270 = image.rotate(270, expand=False)
     
+    transformed_image = transform_img_gray(image)
+
+    _, x_pixels, y_pixels = transformed_image.shape
+    trainingImages.append(transformed_image)
+    trainingImages.append(transform_img_gray(image_rotated90))
+    trainingImages.append(transform_img_gray(image_rotated180))
+    trainingImages.append(transform_img_gray(image_rotated270))
+
     # Generate labels 
     las = laspy.read(laz_path, laz_backend=laspy.compression.LazBackend.LazrsParallel)
     
@@ -105,10 +113,16 @@ for num, path in enumerate(path_tuples):
     #fig.savefig("image_"+str(num)+".png", dpi=200)
     
     lines_image = Image.fromarray(lines_image)
-    labelImages.append(transform_img_gray(lines_image))
-    
+    lines_image_rotated90 = lines_image.rotate(90, expand=False)
+    lines_image_rotated180 = lines_image.rotate(180, expand=False)
+    lines_image_rotated270 = lines_image.rotate(270, expand=False)
 
-X_train, X_test, Y_train, Y_test = train_test_split(trainingImages, labelImages, test_size=0.10)
+    labelImages.append(transform_img_gray(lines_image))
+    labelImages.append(transform_img_gray(lines_image_rotated90))
+    labelImages.append(transform_img_gray(lines_image_rotated180))
+    labelImages.append(transform_img_gray(lines_image_rotated270))
+
+X_train, X_test, Y_train, Y_test = train_test_split(trainingImages, labelImages, test_size=0.15)
 #X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1)
 
 print(len(X_train), len(Y_train))
@@ -133,106 +147,84 @@ trainloader = torch.utils.data.DataLoader(training_set, batch_size=8, shuffle=Tr
 testloader = torch.utils.data.DataLoader(test_set, batch_size=8, shuffle=True, num_workers=4)
 
 #torch.save(valloader, "valloaderLarge.pt")
-torch.save(testloader, "testloaderLarge.pt")
-torch.save(trainloader, "trainloaderLarge.pt")
+torch.save(testloader, "testloader.pt")
+torch.save(trainloader, "trainloader.pt")
 
-
-class ConvNetRGB(nn.Module):
-    def __init__(self):
-        super(ConvNetRGB, self).__init__()
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, padding = 1),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding = 1),            
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
-            ).cuda()
-        
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding = 1),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding = 1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)).cuda()
-        
-        self.layer3 = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding = 1),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding = 1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)).cuda()
-        
-        self.layer4 = nn.Sequential(
-            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, padding = 1),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding = 1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)).cuda()
-        
-        self.layer5 = nn.Sequential(
-            nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, padding = 1),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, padding = 1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)).cuda()
-
-
-        self.down1 = nn.Sequential(nn.ConvTranspose2d(in_channels=1024, out_channels=1024,
-                                        stride = 2, kernel_size=3, padding = 1, output_padding=1),
-                                   nn.ConvTranspose2d(in_channels=1024, out_channels=512,
-                                        stride = 1, kernel_size=3, padding = 1)
-                                  ).cuda()
-        
-        self.down2 = nn.Sequential(nn.ConvTranspose2d(in_channels=512, out_channels=512,
-                                        stride = 2, kernel_size=3, padding = 1, output_padding=1),
-                                   nn.ConvTranspose2d(in_channels=512, out_channels=256,
-                                        stride = 1, kernel_size=3, padding = 1)
-                                  ).cuda()
-        
-        self.down3 = nn.Sequential(nn.ConvTranspose2d(in_channels=256, out_channels=256,
-                                        stride = 2, kernel_size=3, padding = 1, output_padding=1),
-                                   nn.ConvTranspose2d(in_channels=256, out_channels=128,
-                                        stride = 1, kernel_size=3, padding = 1)
-                                  ).cuda()
-        
-        self.down4 = nn.Sequential(nn.ConvTranspose2d(in_channels=128, out_channels=128,
-                                        stride = 2, kernel_size=3, padding = 1, output_padding=1),
-                                   nn.ConvTranspose2d(in_channels=128, out_channels=64,
-                                        stride = 1, kernel_size=3, padding = 1)
-                                  ).cuda()
-        
-        self.down5 = nn.Sequential(nn.ConvTranspose2d(in_channels=64, out_channels=64,
-                                        stride = 2, kernel_size=3, padding = 1, output_padding=1),
-                                   nn.ConvTranspose2d(in_channels=64, out_channels=1,
-                                        stride = 1, kernel_size=3, padding = 1)
-                                  ).cuda()
-        
-
-    def forward(self, x):
-        out = self.layer1(x)
-        #print(f"self.layer1 {out.shape}")
-        out = self.layer2(out)
-        #print(f"self.layer2 {out.shape}")
-        out = self.layer3(out)
-        #print(f"self.layer3 {out.shape}")
-        out = self.layer4(out)
-        #print(f"self.layer4 {out.shape}")
-        out= self.layer5(out)
-        #print(f"self.layer5 {out.shape}")
-        out = self.down1(out)
-        #print(f"self.down1 {out.shape}")
-        out = self.down2(out)
-        #print(f"self.down2 {out.shape}")
-        out = self.down3(out)
-        #print(f"self.down3 {out.shape}")
-        out = self.down4(out)
-        #print(f"self.down4 {out.shape}")
-        out = self.down5(out)
-        #print(f"self.down5 {out.shape}")
-        #out = torch.sigmoid(out)
-        return out
+class conv_block(nn.Module):
+    def __init__(self, in_c, out_c):
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_c, out_c, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(out_c, out_c, kernel_size=3, padding=1)
+        self.relu = nn.ReLU()
     
+    def forward(self, inputs):
+        x = self.conv1(inputs)
+        x = self.relu(x)
+        x = self.conv2(x)
+        x = self.relu(x)
+        return x
+    
+class encoder_block(nn.Module):
+    def __init__(self, in_c, out_c):
+        super().__init__()
+        self.conv = conv_block(in_c, out_c)
+        self.pool = nn.MaxPool2d((2, 2))
 
+    def forward(self, inputs):
+        x = self.conv(inputs)
+        p = self.pool(x)
+        return x, p
+    
+class decoder_block(nn.Module):
+    def __init__(self, in_c, out_c):
+        super().__init__()
+        self.up = nn.ConvTranspose2d(in_c, out_c, kernel_size=2, stride=2, padding=0)
+        self.conv = conv_block(out_c+out_c, out_c)
+    
+    def forward(self, inputs, skip):
+        x = self.up(inputs)
+        x = torch.cat([x, skip], axis=1)
+        x = self.conv(x)
+        return x
+    
+class ConvUNet(nn.Module):
+    
+    def __init__(self):
+        super().__init__()
+        #""" Encoder """
+        self.e1 = encoder_block(1, 64).cuda()
+        self.e2 = encoder_block(64, 128).cuda()
+        self.e3 = encoder_block(128, 256).cuda()
+        self.e4 = encoder_block(256, 512).cuda()
+        #""" Bottleneck """
+        self.b = conv_block(512, 1024).cuda()
+        #""" Decoder """
+        self.d1 = decoder_block(1024, 512).cuda()
+        self.d2 = decoder_block(512, 256).cuda()
+        self.d3 = decoder_block(256, 128).cuda()
+        self.d4 = decoder_block(128, 64).cuda()
+        #""" Classifier """
+        self.outputs = nn.Conv2d(64, 1, kernel_size=1, padding=0).cuda()
+    
+    def forward(self, inputs):
+        #""" Encoder """
+        s1, p1 = self.e1(inputs)
+        s2, p2 = self.e2(p1)
+        s3, p3 = self.e3(p2)
+        s4, p4 = self.e4(p3)
+
+        #""" Bottleneck """
+        b = self.b(p4)
+
+        #""" Decoder """
+        d1 = self.d1(b, s4)
+        d2 = self.d2(d1, s3)
+        d3 = self.d3(d2, s2)
+        d4 = self.d4(d3, s1)
+
+        #""" Classifier """
+        outputs = self.outputs(d4)
+        return outputs
 
 def ConvNetTraining(trainloader, valloader, Conv, lossFunction, learning_rate, epochs):
     model = Conv
@@ -240,13 +232,13 @@ def ConvNetTraining(trainloader, valloader, Conv, lossFunction, learning_rate, e
     criterion = lossFunction.cuda()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     
-    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.995)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.998)
     
     # loss arrays for figures
     TrainingLossArray = []
     ValidationLossArray = []
     
-    early_stopping = 2500
+    early_stopping = 1500
     notImproved = 0
     bestLoss = None
     bestModel = None
@@ -296,7 +288,7 @@ def ConvNetTraining(trainloader, valloader, Conv, lossFunction, learning_rate, e
             notImproved = 0
             bestLoss = validation_loss
             bestModel = model
-            torch.save(bestModel, "bestModelLarge.pth")
+            torch.save(bestModel, "bestModel.pth")
         else:
             notImproved +=1
         # Converges if the training has not improved for a certain amount of iterations
@@ -304,14 +296,14 @@ def ConvNetTraining(trainloader, valloader, Conv, lossFunction, learning_rate, e
             break
         scheduler.step()
 
-    torch.save(model, "latestModelLarge.pth")    
+    torch.save(model, "latestModel.pth")    
     return bestModel, ValidationLossArray, TrainingLossArray
 
 
-bestModel, ValidationLossArray, TrainingLossArray = ConvNetTraining(trainloader, testloader, ConvNetRGB(), nn.MSELoss(), 0.001, 5000)
+bestModel, ValidationLossArray, TrainingLossArray = ConvNetTraining(trainloader, testloader, ConvUNet(), nn.MSELoss(), 0.000001, 4000)
 
-with open('valLossLarge.npy', 'wb') as f:
+with open('valLoss.npy', 'wb') as f:
     np.save(f, np.array(ValidationLossArray))
 
-with open('trainLossLarge.npy', 'wb') as f:
+with open('trainLoss.npy', 'wb') as f:
     np.save(f, np.array(TrainingLossArray))
