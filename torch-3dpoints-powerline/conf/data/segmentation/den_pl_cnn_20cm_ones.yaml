@@ -18,8 +18,11 @@ outlier_voxel_size: 0.7
 outlier_nb_neighbors: 19
 outlier_std_ratio: 50
 path_to_cnn_model: "/home/jf/Documents/msc/torch-3dpoints-powerline/bestModel.pth"
-cnn_model_size: 128
-cnn_model_image_size: 4096
+network_size: 128
+image_size: 4096
+meters_around_line: 10
+cc_area: 7000
+simplify_tolerance: 8
 train_transform:
   - transform: MinPoints
     lparams: [ 512 ]
