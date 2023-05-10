@@ -1,31 +1,38 @@
-import pandas as pd
-import numpy as np
-import glob
-import laspy
-import cv2
+# import numpy as np
+# import laspy
+# import cv2
 
-import matplotlib.pyplot as plt
+# import torch
+# import torchvision.transforms as transforms
+# from torch_points3d.core.data_transform.DenmarkUNet.UNet import ConvUNet
+# # import rasterio
+# # from rasterio.features import shapes
 
-import torch
-import torchvision.transforms as transforms
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
+# import shapely
+# from shapely.geometry import Polygon, mapping
+# from matplotlib.path import Path as plt_path
 
-import rasterio
-from rasterio.features import shapes
 
 import shapely
 from shapely.geometry import Polygon, mapping
+import numpy as np
+import cv2
+import laspy
+import rasterio
 from PIL import Image
+from rasterio.features import shapes
 from matplotlib.path import Path as plt_path
+import ipdb
+import torch
+import torchvision.transforms as transforms
+import torch.nn as T_nn
 
-class conv_block(nn.Module):
+class conv_block(T_nn.Module):
     def __init__(self, in_c, out_c):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_c, out_c, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(out_c, out_c, kernel_size=3, padding=1)
-        self.relu = nn.ReLU()
+        self.conv1 = T_nn.Conv2d(in_c, out_c, kernel_size=3, padding=1)
+        self.conv2 = T_nn.Conv2d(out_c, out_c, kernel_size=3, padding=1)
+        self.relu = T_nn.ReLU()
     
     def forward(self, inputs):
         x = self.conv1(inputs)
@@ -34,21 +41,21 @@ class conv_block(nn.Module):
         x = self.relu(x)
         return x
     
-class encoder_block(nn.Module):
+class encoder_block(T_nn.Module):
     def __init__(self, in_c, out_c):
         super().__init__()
         self.conv = conv_block(in_c, out_c)
-        self.pool = nn.MaxPool2d((2, 2))
+        self.pool = T_nn.MaxPool2d((2, 2))
 
     def forward(self, inputs):
         x = self.conv(inputs)
         p = self.pool(x)
         return x, p
     
-class decoder_block(nn.Module):
+class decoder_block(T_nn.Module):
     def __init__(self, in_c, out_c):
         super().__init__()
-        self.up = nn.ConvTranspose2d(in_c, out_c, kernel_size=2, stride=2, padding=0)
+        self.up = T_nn.ConvTranspose2d(in_c, out_c, kernel_size=2, stride=2, padding=0)
         self.conv = conv_block(out_c+out_c, out_c)
     
     def forward(self, inputs, skip):
@@ -57,7 +64,7 @@ class decoder_block(nn.Module):
         x = self.conv(x)
         return x
     
-class ConvUNet(nn.Module):
+class ConvUNet(T_nn.Module):
     
     def __init__(self):
         super().__init__()
@@ -74,7 +81,7 @@ class ConvUNet(nn.Module):
         self.d3 = decoder_block(256, 128).cuda()
         self.d4 = decoder_block(128, 64).cuda()
         #""" Classifier """
-        self.outputs = nn.Conv2d(64, 1, kernel_size=1, padding=0).cuda()
+        self.outputs = T_nn.Conv2d(64, 1, kernel_size=1, padding=0).cuda()
     
     def forward(self, inputs):
         #""" Encoder """
@@ -97,14 +104,16 @@ class ConvUNet(nn.Module):
         return outputs
 
 
+
 class PolygonCNN(object):
-    def __init__(self, path_to_data, path_to_model, network_size, image_size, meters_around_line, cc_area, simplify_tolerance):
+    def __init__(self, path_to_data, path_to_model, network_size, image_size, meters_around_line, simplify_tolerance):
         self.path_to_data = path_to_data
-        self.model = torch.load(path_to_model)
+        model = ConvUNet()
+        model.load_state_dict(torch.load(path_to_model))
+        self.model = model
         self.network_size = network_size
         self.image_size = image_size
         self.meters_around_line = meters_around_line
-        self.cc_area = cc_area
         self.simplify_tolerance = simplify_tolerance
         self.transform_img_gray = transforms.Compose([transforms.Resize((image_size,image_size)), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
@@ -178,12 +187,7 @@ class PolygonCNN(object):
 
         # Must be image type for connected components
         lines_image = (lines_image * 255).astype(np.uint8)
-        (_, label_ids, bounding_box, _) = cv2.connectedComponentsWithStats(lines_image)
-        for i in range(len(bounding_box)):
-            area = bounding_box[i][cv2.CC_STAT_AREA]
-            if area < self.cc_area:
-                lines_image[label_ids == i] = 0
-        
+
         return lines_image
     
 
