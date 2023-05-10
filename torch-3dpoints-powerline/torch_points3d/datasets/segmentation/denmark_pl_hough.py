@@ -6,7 +6,7 @@ from pathlib import Path
 from multiprocessing import Pool
 from functools import partial
 
-
+# THIS HAS TO BE IMPORTED HERE OTHERWISE RASTERIO WILL CRASH IN POLYGON FILE torch-3dpoints-powerline/torch_points3d/core/data_transform/polygon.py
 import open3d as o3d
 import numpy as np
 import laspy
