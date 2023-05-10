@@ -196,18 +196,18 @@ class HoughLinePre(object):
             # Check if point is inside the bounding box
             indexes_inside_box = bbox_reg_polygon[i].contains_points(list_zipped)
             indexes_inside_box = np.array([index for index, x in enumerate(indexes_inside_box) if x])
+            if len(indexes_inside_box) != 0:
+                # Generate small dataset
+                tmp = list_zipped[indexes_inside_box]
 
-            # Generate small dataset
-            tmp = list_zipped[indexes_inside_box]
+                # Check if any of these points are in the polygon
+                indexes_inside_polygon = reg_polygons[i].contains_points(tmp)
 
-            # Check if any of these points are in the polygon
-            indexes_inside_polygon = reg_polygons[i].contains_points(tmp)
+                # Find the indexes from the box that is also inside the polygon
+                final_indexes = indexes_inside_box[indexes_inside_polygon]
 
-            # Find the indexes from the box that is also inside the polygon
-            final_indexes = indexes_inside_box[indexes_inside_polygon]
-
-            # Update the indexes
-            indexes_needed[final_indexes] = 1
+                # Update the indexes
+                indexes_needed[final_indexes] = 1
 
         for i in range(len(multi_polygons)):
             tmp_indexes_needed = np.zeros(len(x_values), dtype=bool)
@@ -238,17 +238,18 @@ class HoughLinePre(object):
                 indexes_inside_box = bb_multi_pol[j].contains_points(list_zipped)
                 indexes_inside_box = np.array([index for index, x in enumerate(indexes_inside_box) if x])
 
-                # Generate small dataset
-                tmp = list_zipped[indexes_inside_box]
+                if len(indexes_inside_box) != 0:
+                    # Generate small dataset
+                    tmp = list_zipped[indexes_inside_box]
 
-                # Check if any of these points are in the polygon
-                indexes_inside_polygon = simpli_multi_pol[j].contains_points(tmp)
-                final_indexes = indexes_inside_box[indexes_inside_polygon]
+                    # Check if any of these points are in the polygon
+                    indexes_inside_polygon = simpli_multi_pol[j].contains_points(tmp)
+                    final_indexes = indexes_inside_box[indexes_inside_polygon]
 
-                # Update the indexes
-                tmp_indexes_not_needed[final_indexes] = 1
-
-            indexes_needed = indexes_needed | (tmp_indexes_needed & np.invert(tmp_indexes_not_needed))
+                    # Update the indexes
+                    tmp_indexes_not_needed[final_indexes] = 1
+                    indexes_needed = indexes_needed | (tmp_indexes_needed & np.invert(tmp_indexes_not_needed))
+                    
         return indexes_needed
     
     def Predictions(self, indexes_needed, point_cloud):
