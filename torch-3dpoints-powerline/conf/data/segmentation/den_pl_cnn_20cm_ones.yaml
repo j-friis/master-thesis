@@ -5,7 +5,7 @@ defaults:
 class: denmark_pl_cnn.DenmarkDataset
 name: "Denmark"
 task: segmentation
-dataroot: /home/jf/data
+dataroot: /home/xdr476/data
 processed_folder: "processed_cnn_20_ones"
 use_category: False
 visualization: True
@@ -17,7 +17,7 @@ block_size_y: 0.025 # tuple for normalized sampling area (e.g., if 1km = 1, 200m
 outlier_voxel_size: 0.7
 outlier_nb_neighbors: 19
 outlier_std_ratio: 50
-path_to_model: "/home/jf/Documents/msc/torch-3dpoints-powerline/models/preprocess_CNN/cnnStateDict.pth"
+path_to_model: "/home/xdr476/master-thesis/torch-3dpoints-powerline/models/preprocess_CNN/cnnStateDict.pth"
 network_size: 128
 image_size: 4096
 meters_around_line: 10
