@@ -118,6 +118,7 @@ class PolygonCNN(object):
         self.transform_img_gray = transforms.Compose([transforms.Resize((image_size,image_size)), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     def __call__(self, filename):
+        # ipdb.set_trace()
         lines_image = self.ImageProcessing(filename)
         reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons = self.Polygonize(lines_image)
         point_cloud = laspy.read(self.path_to_data+'/LazFilesWithHeightParam/'+filename+'_hag_nn.laz', laz_backend=laspy.compression.LazBackend.LazrsParallel)

@@ -75,7 +75,7 @@ class Denmark(Dataset):
 
         file_names = [f.stem for f in self.raw_file_names]
         # load all room data
-        new_laz_dir = Path(self.raw_dir).joinpath(self.split).joinpath("NewLaz")
+        new_laz_dir = Path(self.raw_dir).joinpath(self.split).joinpath("CNNLaz")
         new_laz_dir.mkdir(exist_ok=True)
         path_to_data = Path(self.raw_dir) / self.split
 
@@ -86,7 +86,8 @@ class Denmark(Dataset):
                                    meters_around_line=self.cnn_param["meters_around_line"], simplify_tolerance=self.cnn_param["simplify_tolerance"])
 
         for file in file_names:
-        #for file in tqdm(file_names):
+        # for file in tqdm(file_names):
+            # ipdb.set_trace()
             new_laz = CNNPreprocess(file)
             new_laz = outlier_clf.RemoveOutliersFromLas(new_laz)
             new_laz.write(str(new_laz_dir)+'/'+file+".laz", do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
