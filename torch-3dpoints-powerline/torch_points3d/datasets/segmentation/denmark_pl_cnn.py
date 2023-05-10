@@ -13,7 +13,7 @@ import laspy
 import torch
 from torch_geometric.data import Data, Dataset
 from torch_points3d.metrics.segmentation_tracker import SegmentationTracker
-from torch_points3d.core.data_transform.polygon import HoughLinePre
+from torch_points3d.core.data_transform.polygonCNN import PolygonCNN
 from torch_points3d.core.data_transform.outlier_removal_o3d import OutlierDetection
 import ipdb
 
@@ -23,15 +23,9 @@ CLASSES = ["others", "wire_conductor"]
 # CLASSES = ["Ground", "High Veg", "Building", "combined"]
 from torch_points3d.datasets.base_dataset import BaseDataset
 
-def polygon_worker(outlier_clf: OutlierDetection,hough_line_pre: HoughLinePre, new_laz_dir: Path, filename:str ):
-    new_laz = hough_line_pre(filename)
-    new_laz = outlier_clf.RemoveOutliersFromLas(new_laz)
-    new_laz.write(str(new_laz_dir)+'/'+filename+".laz", do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
-
-
 class Denmark(Dataset):
     def __init__(self, root, processed_folder,
-                 polygon_param, outlier_param, split, block_size, overlap: float,
+                 cnn_param, outlier_param, split, block_size, overlap: float,
                  global_z=None, transform=None, pre_transform=None, pre_filter=None):
         
         self.processed_file_names_ = []
@@ -50,7 +44,7 @@ class Denmark(Dataset):
 
         self.n_classes = len(CLASSES)
 
-        self.polygon_param = polygon_param
+        self.cnn_param = cnn_param
         self.outlier_param = outlier_param
 
 
@@ -87,39 +81,14 @@ class Denmark(Dataset):
         new_laz_dir.mkdir(exist_ok=True)
         path_to_data = Path(self.raw_dir) / self.split
 
-        # print("Runing polygon")
-
-        # outlier_clf = OutlierDetection(voxel_size=self.outlier_param["voxel_size"],
-        #                                 nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
-        # pre = HoughLinePre(path_to_data=str(path_to_data), 
-        #         canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
-        #         hough_lines_treshold=self.polygon_param["hough_lines_treshold"], max_line_gap=self.polygon_param["max_line_gap"],
-        #         min_line_length=self.polygon_param["min_line_length"], meters_around_line=self.polygon_param["meters_around_line"],
-        #         cc_area=self.polygon_param["cc_area"], simplify_tolerance=self.polygon_param["simplify_tolerance"])
-
-        # func = partial(polygon_worker, outlier_clf, pre, new_laz_dir)
-
-        # # with Pool(1) as p:
-        # #     # results = tqdm(
-        # #     #     p.imap_unordered(worker, onlyfiles),
-        # #     #     total=len(onlyfiles),
-        # #     # )  # 'total' is redundant here but can be useful
-        # #     # when the size of the iterable is unobvious
-        # #     p.map(func, file_names)
-        # #     # for result in results:
-        # #     #     print(result)
-
         outlier_clf = OutlierDetection(voxel_size=self.outlier_param["voxel_size"],
                                         nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
-        HoughLinePreProcess = HoughLinePre(path_to_data=str(path_to_data),
-                canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
-                hough_lines_treshold=self.polygon_param["hough_lines_treshold"], max_line_gap=self.polygon_param["max_line_gap"],
-                min_line_length=self.polygon_param["min_line_length"], meters_around_line=self.polygon_param["meters_around_line"],
-                cc_area=self.polygon_param["cc_area"], simplify_tolerance=self.polygon_param["simplify_tolerance"])
+        CNNPreprocess = PolygonCNN(path_to_data=str(path_to_data), path_to_model=self.cnn_param["path_to_model"],
+                                   network_size=self.cnn_param["cnn_model_size"], image_size=self.cnn_param["cnn_model_image_size"])
 
         for file in file_names:
         #for file in tqdm(file_names):
-            new_laz = HoughLinePreProcess(file)
+            new_laz = CNNPreprocess(file)
             new_laz = outlier_clf.RemoveOutliersFromLas(new_laz)
             new_laz.write(str(new_laz_dir)+'/'+file+".laz", do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
 
@@ -343,15 +312,10 @@ class DenmarkDataset(BaseDataset):
         block_size = (dataset_opt.block_size_x,
                       dataset_opt.block_size_y)  # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2)
         #ipdb.set_trace()
-        polygon_param = {}
-        polygon_param["canny_lower"] = dataset_opt.canny_lower
-        polygon_param["canny_upper"] = dataset_opt.canny_upper
-        polygon_param["cc_area"] = dataset_opt.cc_area
-        polygon_param["hough_lines_treshold"] = dataset_opt.hough_lines_treshold
-        polygon_param["max_line_gap"] = dataset_opt.max_line_gap
-        polygon_param["min_line_length"] = dataset_opt.min_line_length
-        polygon_param["meters_around_line"] = dataset_opt.meters_around_line
-        polygon_param["simplify_tolerance"] = dataset_opt.simplify_tolerance
+        cnn_param = {}
+        cnn_param["path_to_cnn_model"] = dataset_opt.path_to_cnn_model
+        cnn_param["cnn_model_size"] = dataset_opt.cnn_model_size
+        cnn_param["cnn_model_image_size"] = dataset_opt.cnn_model_image_size
 
         outlier_param = {}
         outlier_param["voxel_size"] = dataset_opt.outlier_voxel_size
@@ -360,21 +324,21 @@ class DenmarkDataset(BaseDataset):
 
         self.train_dataset = Denmark(
             split='train', root=self._data_path, processed_folder=dataset_opt.processed_folder,
-            polygon_param= polygon_param, outlier_param=outlier_param,
+            cnn_param= cnn_param, outlier_param=outlier_param,
             overlap=dataset_opt.train_overlap, block_size=block_size,
             transform=self.train_transform, pre_transform=self.pre_transform
         )
 
         self.val_dataset = Denmark(
             split='val', root=self._data_path, processed_folder=dataset_opt.processed_folder,
-            polygon_param= polygon_param, outlier_param=outlier_param, overlap=0,
+            cnn_param= cnn_param, outlier_param=outlier_param, overlap=0,
             block_size=block_size, global_z=self.train_dataset.global_z,
             transform=self.val_transform, pre_transform=self.pre_transform
          )
 
         self.test_dataset = Denmark(
             split='test', root=self._data_path, processed_folder=dataset_opt.processed_folder,
-            polygon_param= polygon_param, outlier_param=outlier_param, overlap=0,
+            cnn_param= cnn_param, outlier_param=outlier_param, overlap=0,
             block_size=block_size, global_z=self.train_dataset.global_z,
             transform=self.test_transform, pre_transform=self.pre_transform
         )
