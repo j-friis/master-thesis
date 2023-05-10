@@ -33,19 +33,12 @@ checkpoint_dir: ""
 # Those arguments within experiment defines which model, dataset and task to be created for benchmarking
 # parameters for Weights and Biases
 wandb:
-  project: nfi
+  project: default
   log: True
-  name: ${model_name}
+  name: dev
   public: True # It will be display the model within wandb log, else not.
   config:
     model_name: ${model_name}
-    features: ${data.features}
-    batch_size: ${training.batch_size}
-    first_subsampling: ${data.first_subsampling}
-    base_lr: ${training.optim.base_lr}
-    first_return_only: ${data.first_return_only}
-    activation: ${models.${model_name}.activation}
-    first_stride: ${models.${model_name}.first_stride}
 
 
 # parameters for TensorBoard Visualization
