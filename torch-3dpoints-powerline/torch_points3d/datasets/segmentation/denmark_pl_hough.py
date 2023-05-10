@@ -111,7 +111,7 @@ class Denmark(Dataset):
 
         outlier_clf = OutlierDetection(voxel_size=self.outlier_param["voxel_size"],
                                         nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
-        pre = HoughLinePre(path_to_data=str(path_to_data),
+        HoughLinePreProcess = HoughLinePre(path_to_data=str(path_to_data),
                 canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
                 hough_lines_treshold=self.polygon_param["hough_lines_treshold"], max_line_gap=self.polygon_param["max_line_gap"],
                 min_line_length=self.polygon_param["min_line_length"], meters_around_line=self.polygon_param["meters_around_line"],
@@ -119,7 +119,7 @@ class Denmark(Dataset):
 
         for file in file_names:
         #for file in tqdm(file_names):
-            new_laz = pre(file)
+            new_laz = HoughLinePreProcess(file)
             new_laz = outlier_clf.RemoveOutliersFromLas(new_laz)
             new_laz.write(str(new_laz_dir)+'/'+file+".laz", do_compress =True, laz_backend=laspy.compression.LazBackend.LazrsParallel)
 
