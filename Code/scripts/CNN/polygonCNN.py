@@ -98,11 +98,14 @@ class ConvUNet(nn.Module):
 
 
 class PolygonCNN(object):
-    def __init__(self, path_to_data, path_to_model, network_size, image_size):
+    def __init__(self, path_to_data, path_to_model, network_size, image_size, meters_around_line, cc_area, simplify_tolerance):
         self.path_to_data = path_to_data
         self.model = torch.load(path_to_model)
         self.network_size = network_size
         self.image_size = image_size
+        self.meters_around_line = meters_around_line
+        self.cc_area = cc_area
+        self.simplify_tolerance = simplify_tolerance
         self.transform_img_gray = transforms.Compose([transforms.Resize((image_size,image_size)), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     def __call__(self, filename):
@@ -115,17 +118,17 @@ class PolygonCNN(object):
 
     def ImageProcessing(self, filename):
         # Load Image
-        image = cv2.imread(self.path_to_data+'/ImagesGroundRemoved/'+filename+'_max.tif', cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(self.path_to_data+'/ImagesGroundRemovedLarge/'+filename+'_max.tif', cv2.IMREAD_UNCHANGED)
         image = np.where(image >= 0, image, 0)
         image = image/np.max(image)
         image = (image*255).astype(np.uint8)
 
         # Create pil image
-        image = Image.fromarray(image)
+        pil_image = Image.fromarray(image)
 
         # Resize Image, Transform to tensor, and Normalize
-        image = self.transform_img_gray(image)
-        x_pixels, y_pixels = image[0].shape
+        tensor_image = self.transform_img_gray(pil_image)
+        x_pixels, y_pixels = tensor_image[0].shape
         
         # Crop the image into equal parts
         network_size = self.network_size
@@ -134,17 +137,15 @@ class PolygonCNN(object):
         
         cropped_image_list = []
         for i in range(amount_of_crops):
+            # Generate slice indices
+            x_start_index = network_size*i
+            x_end_index = network_size*(i+1)
             for j in range(amount_of_crops):
-                
-                # Generate slice indices
-                x_start_index = network_size*i
-                x_end_index = network_size*(i+1)
                 y_start_index = network_size*j
                 y_end_index = network_size*(j+1)
-                
                 # Slice image of size [1, image_size, image_size] and obtain the cropped image
-                cropped_image = image[0][x_start_index:x_end_index,y_start_index:y_end_index]
-                cropped_image_list.append(cropped_image)
+                cropped_image = tensor_image[0][x_start_index:x_end_index,y_start_index:y_end_index]
+                cropped_image_list.append(cropped_image.unsqueeze(0).unsqueeze(0))
 
         # Apply model
         output_list = []
@@ -167,14 +168,28 @@ class PolygonCNN(object):
         # Get pixels per meter to create a cirkular kernel size of size "meters_around_line"
         
         x_pixels, y_pixels = x_pixels/1000, y_pixels/1000
-        meters_around_line = self.meters_around_line
-        kernel_size = int(meters_around_line*np.ceil(x_pixels))
+        kernel_size = int(self.meters_around_line*np.ceil(x_pixels))
         circular_kernel = np.ones((kernel_size, kernel_size), np.uint8)
         # Create a cirkular kernel using (image, center_coordinates, radius, color, thickness)
         cv2.circle(circular_kernel, (int(kernel_size/2), int(kernel_size/2)), int(kernel_size/2), 255, -1)
         
         # Apply dilation using the cirkular kernel
         lines_image = cv2.dilate(lines_image, circular_kernel, iterations=1)
+
+        # Must be image type for connected components
+        lines_image = (lines_image * 255).astype(np.uint8)
+        (_, label_ids, bounding_box, _) = cv2.connectedComponentsWithStats(lines_image)
+        for i in range(len(bounding_box)):
+            area = bounding_box[i][cv2.CC_STAT_AREA]
+            if area < self.cc_area:
+                lines_image[label_ids == i] = 0
+        
+        fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(10,10))
+        ax0.imshow(image, cmap='gray')
+        ax0.set_title('Image')
+        ax1.imshow(lines_image, cmap='gray')
+        ax1.set_title('Prediction')
+        plt.show()
         return lines_image
     
 
@@ -202,16 +217,13 @@ class PolygonCNN(object):
                     tmpMulti.append(Polygon(p))
                 all_multi_polygons.append(tmpMulti)
 
-
         # Remove all low area multipolygons
         for i, multi_pol in enumerate(all_multi_polygons):
             new_list = [multi_pol[0]]
             # No matter what, dont remove the first one
             for pol in multi_pol[1:]:
-                if pol.area > 1000:
-                    new_list.append(pol)
+                new_list.append(pol)
             all_multi_polygons[i] = new_list
-
 
         simplified_all_polygons = []
         simplified_all_multi_polygons =[]
@@ -256,7 +268,6 @@ class PolygonCNN(object):
                 tmp_multi_pol_boxes.append(plt_path(bb))
             bbox_all_multi_polygons_path.append(tmp_multi_pol_boxes)
 
-
         # Create plt_path polygons from the simplified shapely polygons
         simplified_all_polygons_path = [plt_path(mapping(p)['coordinates'][0]) for p in simplified_all_polygons]
         simplified_all_multi_polygons_path = []
@@ -293,17 +304,18 @@ class PolygonCNN(object):
             indexes_inside_box = bbox_reg_polygon[i].contains_points(list_zipped)
             indexes_inside_box = np.array([index for index, x in enumerate(indexes_inside_box) if x])
 
-            # Generate small dataset
-            tmp = list_zipped[indexes_inside_box]
+            if len(indexes_inside_box) != 0:
+                # Generate small dataset
+                tmp = list_zipped[indexes_inside_box]
 
-            # Check if any of these points are in the polygon
-            indexes_inside_polygon = reg_polygons[i].contains_points(tmp)
+                # Check if any of these points are in the polygon
+                indexes_inside_polygon = reg_polygons[i].contains_points(tmp)
 
-            # Find the indexes from the box that is also inside the polygon
-            final_indexes = indexes_inside_box[indexes_inside_polygon]
+                # Find the indexes from the box that is also inside the polygon
+                final_indexes = indexes_inside_box[indexes_inside_polygon]
 
-            # Update the indexes
-            indexes_needed[final_indexes] = 1
+                # Update the indexes
+                indexes_needed[final_indexes] = 1
 
         for i in range(len(multi_polygons)):
             tmp_indexes_needed = np.zeros(len(x_values), dtype=bool)
@@ -333,18 +345,18 @@ class PolygonCNN(object):
 
                 indexes_inside_box = bb_multi_pol[j].contains_points(list_zipped)
                 indexes_inside_box = np.array([index for index, x in enumerate(indexes_inside_box) if x])
+                if len(indexes_inside_box) != 0:
+                    # Generate small dataset
+                    tmp = list_zipped[indexes_inside_box]
 
-                # Generate small dataset
-                tmp = list_zipped[indexes_inside_box]
+                    # Check if any of these points are in the polygon
+                    indexes_inside_polygon = simpli_multi_pol[j].contains_points(tmp)
+                    final_indexes = indexes_inside_box[indexes_inside_polygon]
 
-                # Check if any of these points are in the polygon
-                indexes_inside_polygon = simpli_multi_pol[j].contains_points(tmp)
-                final_indexes = indexes_inside_box[indexes_inside_polygon]
+                    # Update the indexes
+                    tmp_indexes_not_needed[final_indexes] = 1
 
-                # Update the indexes
-                tmp_indexes_not_needed[final_indexes] = 1
-
-            indexes_needed = indexes_needed | (tmp_indexes_needed & np.invert(tmp_indexes_not_needed))
+                    indexes_needed = indexes_needed | (tmp_indexes_needed & np.invert(tmp_indexes_not_needed))
         return indexes_needed
     
     def Predictions(self, indexes_needed, point_cloud):
