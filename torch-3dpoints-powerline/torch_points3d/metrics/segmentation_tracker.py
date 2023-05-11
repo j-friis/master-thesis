@@ -35,6 +35,8 @@ class SegmentationTracker(BaseTracker):
             "acc": max,
             "loss": min,
             "map": max,
+            "precision": max,
+            "recall": max,
         }  # Those map subsentences to their optimization functions
 
     def reset(self, stage="train"):
@@ -88,6 +90,16 @@ class SegmentationTracker(BaseTracker):
             i: "{:.2f}".format(100 * v)
             for i, v in enumerate(self._confusion_matrix.get_intersection_union_per_class()[0])
         }
+        #use it as result[ground_truth][predicted]
+        confusion_matrix = self._confusion_matrix.get_confusion_matrix()
+        self._precision = confusion_matrix[1][1]/(confusion_matrix[1][1]+confusion_matrix[0][1])
+        self._recall = confusion_matrix[1][1]/(confusion_matrix[1][1]+confusion_matrix[1][0])
+        # self._true_postive = confusion_matrix[1][1]
+        # self._false_postive = confusion_matrix[0][1]
+        # self._false_negative = confusion_matrix[1][0]
+        # self._true_negative = confusion_matrix[0][0]
+
+
 
     def get_metrics(self, verbose=False) -> Dict[str, Any]:
         """ Returns a dictionnary of all metrics and losses being tracked
@@ -97,7 +109,8 @@ class SegmentationTracker(BaseTracker):
         metrics["{}_acc".format(self._stage)] = self._acc
         metrics["{}_macc".format(self._stage)] = self._macc
         metrics["{}_miou".format(self._stage)] = self._miou
-
+        metrics["{}_precision".format(self._stage)] = self._precision
+        metrics["{}_recall".format(self._stage)] = self._recall
         if verbose:
             metrics["{}_iou_per_class".format(self._stage)] = self._iou_per_class
         return metrics
