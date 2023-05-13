@@ -20,8 +20,9 @@ outlier_std_ratio: 50
 path_to_model: "/home/xdr476/master-thesis/torch-3dpoints-powerline/models/preprocess_CNN/cnnStateDict.pth"
 network_size: 128
 image_size: 4096
-meters_around_line: 10
+meters_around_line: 12
 simplify_tolerance: 8
+cc_area: 5000
 train_transform:
   - transform: MinPoints
     lparams: [ 512 ]

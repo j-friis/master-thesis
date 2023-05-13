@@ -106,7 +106,7 @@ class ConvUNet(T_nn.Module):
 
 
 class PolygonCNN(object):
-    def __init__(self, path_to_data, path_to_model, network_size, image_size, meters_around_line, simplify_tolerance):
+    def __init__(self, path_to_data, path_to_model, network_size, image_size, meters_around_line, simplify_tolerance, cc_area):
         self.path_to_data = path_to_data
         model = ConvUNet()
         model.load_state_dict(torch.load(path_to_model))
@@ -115,6 +115,7 @@ class PolygonCNN(object):
         self.image_size = image_size
         self.meters_around_line = meters_around_line
         self.simplify_tolerance = simplify_tolerance
+        self.cc_area = cc_area
         self.transform_img_gray = transforms.Compose([transforms.Resize((image_size,image_size)), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     def __call__(self, filename):
@@ -188,6 +189,11 @@ class PolygonCNN(object):
 
         # Must be image type for connected components
         lines_image = (lines_image * 255).astype(np.uint8)
+        (_, label_ids, bounding_box, _) = cv2.connectedComponentsWithStats(lines_image)
+        for i in range(len(bounding_box)):
+            area = bounding_box[i][cv2.CC_STAT_AREA]
+            if area < self.cc_area:
+                lines_image[label_ids == i] = 0
 
         return lines_image
     

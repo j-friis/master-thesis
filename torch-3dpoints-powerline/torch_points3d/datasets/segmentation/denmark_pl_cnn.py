@@ -83,7 +83,8 @@ class Denmark(Dataset):
                                         nb_neighbors=self.outlier_param["nb_neighbors"], std_ratio=self.outlier_param["std_ratio"])
         CNNPreprocess = PolygonCNN(path_to_data=str(path_to_data), path_to_model=self.cnn_param["path_to_model"],
                                    network_size=self.cnn_param["network_size"], image_size=self.cnn_param["image_size"],
-                                   meters_around_line=self.cnn_param["meters_around_line"], simplify_tolerance=self.cnn_param["simplify_tolerance"])
+                                   meters_around_line=self.cnn_param["meters_around_line"], simplify_tolerance=self.cnn_param["simplify_tolerance"],
+                                   cc_area=self.cnn_param["cc_area"])
 
         for file in file_names:
         # for file in tqdm(file_names):
@@ -318,6 +319,7 @@ class DenmarkDataset(BaseDataset):
         cnn_param["image_size"] = dataset_opt.image_size
         cnn_param["meters_around_line"] = dataset_opt.meters_around_line
         cnn_param["simplify_tolerance"] = dataset_opt.simplify_tolerance
+        cnn_param["cc_area"] = dataset_opt.cc_area
 
         outlier_param = {}
         outlier_param["voxel_size"] = dataset_opt.outlier_voxel_size
