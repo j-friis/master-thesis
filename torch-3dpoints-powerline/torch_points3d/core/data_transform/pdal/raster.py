@@ -36,11 +36,6 @@ def worker(output_dir: Path, file: str):
     pipeline = pdal.Pipeline(json)
     count = pipeline.execute()
     return
-    file_name = in_file.split('/')[-1]
-    file_name = file_name.replace("_height_filtered",'')
-
-    return f"Done with {file_name}"
-
 
 
 def rasterize(dir: Path, output_dir: Path, MAX_WORKERS: int):
@@ -53,82 +48,9 @@ def rasterize(dir: Path, output_dir: Path, MAX_WORKERS: int):
 
 
     with Pool(MAX_WORKERS) as p:
-        # results = tqdm(
-        #     p.imap_unordered(worker, onlyfiles),
-        #     total=len(onlyfiles),
-        # )  # 'total' is redundant here but can be useful
-        # when the size of the iterable is unobvious
         p.map(func, onlyfiles)
-        #p.map(worker, onlyfiles)
-        # for result in results:
-        #     print(result)
-
-
-    #for file in tqdm(onlyfiles):
-    # for file in onlyfiles:
-    #     input_file = file.name
-    #     out_file = input_file.replace("_height_filtered",'')
-    #     out_file = out_file.split(".")[0]
-
-    #     json = """
-    #     [
-    #         "%s",   
-    #         {
-    #             "type":"writers.gdal",
-    #             "filename":%s_max.tif",
-    #             "output_type":"max",
-    #             "gdaldriver":"GTiff",
-    #             "resolution":0.1
-    #         }
-    #     ]
-    #     """ % (str(file), out_file)
-    #     #""" % (str(file), str(output_dir), out_file)
-    #     print(json)
-    #     pipeline = pdal.Pipeline(json)
-    #     count = pipeline.execute()
-        
-    #     # json = """
-    #     # [
-    #     #     "%s",
-    #     #     {
-    #     #         "type":"writers.gdal",
-    #     #         "filename":"%s_min.tif",
-    #     #         "output_type":"min",
-    #     #         "gdaldriver":"GTiff",
-    #     #         "resolution":0.08
-    #     #     },
-    #     #     {
-    #     #         "type":"writers.gdal",
-    #     #         "filename":"%s_max.tif",
-    #     #         "output_type":"max",
-    #     #         "gdaldriver":"GTiff",
-    #     #         "resolution":0.08
-    #     #     },
-    #     #     {
-    #     #         "type":"writers.gdal",
-    #     #         "filename":"%s_idw.tif",
-    #     #         "output_type":"idw",
-    #     #         "gdaldriver":"GTiff",
-    #     #         "resolution":0.08
-    #     #     }
-    #     # ]
-    #     # """ % (file_name, out_file, out_file, out_file)
-
-    #     json = """
-    #     [
-    #         "%s",
-    #         {
-    #             "type":"writers.gdal",
-    #             "filename":"%s_max.tif",
-    #             "output_type":"max",
-    #             "gdaldriver":"GTiff",
-    #             "resolution":0.08
-    #         }
-    #     ]
-    #     """ % (file_name, out_file)
-    #     pipeline = pdal.Pipeline(json)
-    #     count = pipeline.execute()
-
+    p.join()
+    p.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Rasterize the laz files.')
