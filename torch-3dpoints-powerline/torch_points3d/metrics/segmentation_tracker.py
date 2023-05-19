@@ -91,6 +91,7 @@ class SegmentationTracker(BaseTracker):
             for i, v in enumerate(self._confusion_matrix.get_intersection_union_per_class()[0])
         }
         #use it as result[ground_truth][predicted]
+        # Does not work if batch size is 1
         confusion_matrix = self._confusion_matrix.get_confusion_matrix()
         self._precision = confusion_matrix[1][1]/(confusion_matrix[1][1]+confusion_matrix[0][1])
         self._recall = confusion_matrix[1][1]/(confusion_matrix[1][1]+confusion_matrix[1][0])
