@@ -1,6 +1,6 @@
 # @package training
 # Those arguments defines the training hyper-parameters
-epochs: 200
+epochs: 500
 num_workers: 4
 batch_size: 32
 cuda: 0
@@ -28,7 +28,6 @@ optim:
 #      bn_clip: 1e-2
 weight_name: "latest" # Used during resume, select with model to load from [miou, macc, acc..., latest]
 enable_cudnn: True
-checkpoint_dir: ""
 
 # Those arguments within experiment defines which model, dataset and task to be created for benchmarking
 # parameters for Weights and Biases
