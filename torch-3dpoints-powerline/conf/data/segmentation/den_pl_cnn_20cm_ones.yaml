@@ -15,8 +15,8 @@ train_overlap: 0.25
 block_size_x: 0.025  # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05
 block_size_y: 0.025 # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05
 outlier_voxel_size: 0.7
-outlier_nb_neighbors: 19
-outlier_std_ratio: 50
+outlier_nb_neighbors: 20
+outlier_std_ratio: 34
 path_to_model: "/home/xdr476/master-thesis/torch-3dpoints-powerline/models/preprocess_CNN/cnnStateDict.pth"
 network_size: 128
 image_size: 4096

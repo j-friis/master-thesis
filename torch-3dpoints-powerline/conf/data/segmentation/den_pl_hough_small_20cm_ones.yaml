@@ -14,17 +14,18 @@ first_subsampling: 0.008 #0.04 for 50m
 train_overlap: 0.25
 block_size_x: 0.025  # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05
 block_size_y: 0.025 # tuple for normalized sampling area (e.g., if 1km = 1, 200m = 0.2) 0.05
-canny_lower: 19
-canny_upper: 101
-cc_area: 1500
-hough_lines_treshold: 30
-max_line_gap: 6
-min_line_length: 12
-meters_around_line: 10
+canny_lower: 20
+canny_upper: 168
+cc_area: 5135
+hough_lines_treshold: 82
+max_line_gap: 15
+min_line_length: 6
+meters_around_line: 6
 simplify_tolerance: 8
+small_dialation_kernel: 5
 outlier_voxel_size: 0.7
-outlier_nb_neighbors: 19
-outlier_std_ratio: 50
+outlier_nb_neighbors: 20
+outlier_std_ratio: 34
 train_transform:
   - transform: MinPoints
     lparams: [ 512 ]

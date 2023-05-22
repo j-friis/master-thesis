@@ -115,7 +115,8 @@ class Denmark(Dataset):
                 canny_lower=self.polygon_param["canny_lower"], canny_upper=self.polygon_param["canny_upper"],
                 hough_lines_treshold=self.polygon_param["hough_lines_treshold"], max_line_gap=self.polygon_param["max_line_gap"],
                 min_line_length=self.polygon_param["min_line_length"], meters_around_line=self.polygon_param["meters_around_line"],
-                cc_area=self.polygon_param["cc_area"], simplify_tolerance=self.polygon_param["simplify_tolerance"])
+                cc_area=self.polygon_param["cc_area"], simplify_tolerance=self.polygon_param["simplify_tolerance"],
+                small_dialation_kernel=self.polygon_param["small_dialation_kernel"])
 
         for file in file_names:
         #for file in tqdm(file_names):
@@ -352,6 +353,7 @@ class DenmarkDataset(BaseDataset):
         polygon_param["min_line_length"] = dataset_opt.min_line_length
         polygon_param["meters_around_line"] = dataset_opt.meters_around_line
         polygon_param["simplify_tolerance"] = dataset_opt.simplify_tolerance
+        polygon_param["small_dialation_kernel"] = dataset_opt.small_dialation_kernel
 
         outlier_param = {}
         outlier_param["voxel_size"] = dataset_opt.outlier_voxel_size
