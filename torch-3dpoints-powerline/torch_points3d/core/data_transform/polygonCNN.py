@@ -294,8 +294,15 @@ class PolygonCNN(object):
     def FilterPolygons(self, reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, point_cloud, image):
         # Pixels per kilometer
         x_pixels, y_pixels = image.shape
+
         x_values = self.CastAllXValuesToImage(point_cloud.X, x_pixels)
         y_values = self.CastAllYValuesToImage(point_cloud.Y, y_pixels)
+
+        x_values = np.where(x_values < x_pixels, x_values, x_pixels)
+        x_values = np.where(x_values >= 0, x_values, 0)
+        
+        y_values = np.where(y_values < y_pixels, y_values, y_pixels)
+        y_values = np.where(y_values >= 0, y_values, 0)
 
         # Format: [(1,1), (3,5), (1,5), ...] with 30 mio samples
         list_zipped = np.array(list(zip(x_values, y_values)))

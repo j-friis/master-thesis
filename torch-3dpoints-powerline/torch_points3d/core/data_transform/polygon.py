@@ -10,7 +10,7 @@ import ipdb
 
 class HoughLinePre(object):
 
-    def __init__(self, path_to_data, canny_lower=19, canny_upper=101, hough_lines_treshold=30, max_line_gap=6, min_line_length=12, meters_around_line=10, cc_area=1500, simplify_tolerance=8):
+    def __init__(self, path_to_data, canny_lower=19, canny_upper=101, hough_lines_treshold=30, max_line_gap=6, min_line_length=12, meters_around_line=10, cc_area=1500, simplify_tolerance=8, small_dialation_kernel=5):
         self.path_to_data = path_to_data
         #self.filename = filename
         self.canny_lower = canny_lower
@@ -21,6 +21,7 @@ class HoughLinePre(object):
         self.meters_around_line = meters_around_line
         self.cc_area = cc_area
         self.simplify_tolerance = simplify_tolerance
+        self.small_dialation_kernel = small_dialation_kernel
 
     def __call__(self, filename):
         lines_image = self.ImageProcessing(filename)
@@ -29,6 +30,21 @@ class HoughLinePre(object):
         indexes_needed = self.FilterPolygons(reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, point_cloud, lines_image)
         new_las = self.Predictions(indexes_needed, point_cloud)
         return new_las
+    
+    def BBTouchingEdge(self, image_shape, bb, epsilon):
+        image_width, image_height = image_shape
+        left, top, width, height = bb[0], bb[1], bb[2], bb[3]
+        right = left + width
+        bottom = top + height
+        distance_to_left = left
+        distance_to_right = image_width - right
+        distance_to_top = top
+        distance_to_bottom = image_height - bottom
+
+        if distance_to_left > epsilon and distance_to_right > epsilon and distance_to_top > epsilon and distance_to_bottom > epsilon:
+            return False
+        else:
+            return True
 
     def ImageProcessing(self, filename):
         # Load Image
@@ -56,42 +72,39 @@ class HoughLinePre(object):
                 l = linesP[i][0]
                 cv2.line(lines_image, (l[0], l[1]), (l[2], l[3]), (255,0,0), 3)
         
-        # Apply small dilation to close small holes
-        kernel = np.ones((3, 3), np.uint8)
+        ## Small Dilation Kernel
+        kernel = np.ones((self.small_dialation_kernel, self.small_dialation_kernel), np.uint8)
         lines_image = cv2.dilate(lines_image, kernel, iterations=1)
 
-        # Apply Connected Components Detection
         (_, label_ids, bounding_box, _) = cv2.connectedComponentsWithStats(lines_image)
         for i in range(len(bounding_box)):
-            area = bounding_box[i][cv2.CC_STAT_AREA]
-            if area < self.cc_area:
-                lines_image[label_ids == i] = 0
+            # Must be 10 Pixels from the edge of the image
+            if not self.BBTouchingEdge(image.shape, bounding_box[i], 10):
+                area = bounding_box[i][cv2.CC_STAT_AREA]
+                if area < self.cc_area:
+                    lines_image[label_ids == i] = 0
 
         # Get pixels per meter to create a cirkular kernel size of size "meters_around_line"
         x_pixels, y_pixels = image.shape
         x_pixels, y_pixels = x_pixels/1000, y_pixels/1000
+
         meters_around_line = self.meters_around_line
         kernel_size = int(meters_around_line*np.ceil(x_pixels))
         circular_kernel = np.ones((kernel_size, kernel_size), np.uint8)
         # Create a cirkular kernel using (image, center_coordinates, radius, color, thickness)
         cv2.circle(circular_kernel, (int(kernel_size/2), int(kernel_size/2)), int(kernel_size/2), 255, -1)
-        
         # Apply dilation using the cirkular kernel
         lines_image = cv2.dilate(lines_image, circular_kernel, iterations=1)
-        return lines_image
-    
+        return lines_image    
 
     def Polygonize(self, lines_image):
-
         # Create Polygons and Multi Polygons
         mask = (lines_image == 255)
         output = rasterio.features.shapes(lines_image, mask=mask, connectivity=4)
         output_list = list(output)
 
-        # Seperate the Multipolygons and Polygons
         all_polygons = []
         all_multi_polygons =[]
-        #ipdb.set_trace()
 
         for multi_polygon in output_list:
             found_polygon = multi_polygon[0]['coordinates']
@@ -111,10 +124,8 @@ class HoughLinePre(object):
             new_list = [multi_pol[0]]
             # No matter what, dont remove the first one
             for pol in multi_pol[1:]:
-                if pol.area > 1000:
-                    new_list.append(pol)
+                new_list.append(pol)
             all_multi_polygons[i] = new_list
-
 
         simplified_all_polygons = []
         simplified_all_multi_polygons =[]
@@ -159,8 +170,7 @@ class HoughLinePre(object):
                 tmp_multi_pol_boxes.append(plt_path(bb))
             bbox_all_multi_polygons_path.append(tmp_multi_pol_boxes)
 
-
-        # Create plt_path polygons from the simplified shapely polygons
+        # Create Path polygons from the simplified shapely polygons
         simplified_all_polygons_path = [plt_path(mapping(p)['coordinates'][0]) for p in simplified_all_polygons]
         simplified_all_multi_polygons_path = []
         for multi_pol in simplified_all_multi_polygons:
@@ -182,8 +192,15 @@ class HoughLinePre(object):
     def FilterPolygons(self, reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, point_cloud, image):
         # Pixels per kilometer
         x_pixels, y_pixels = image.shape
+
         x_values = self.CastAllXValuesToImage(point_cloud.X, x_pixels)
         y_values = self.CastAllYValuesToImage(point_cloud.Y, y_pixels)
+
+        x_values = np.where(x_values < x_pixels, x_values, x_pixels)
+        x_values = np.where(x_values >= 0, x_values, 0)
+        
+        y_values = np.where(y_values < y_pixels, y_values, y_pixels)
+        y_values = np.where(y_values >= 0, y_values, 0)
 
         # Format: [(1,1), (3,5), (1,5), ...] with 30 mio samples
         list_zipped = np.array(list(zip(x_values, y_values)))
