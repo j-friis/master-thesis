@@ -10,16 +10,6 @@ def worker(output_dir: Path, file: str):
     out_file = input_file.replace("_height_filtered",'')
     out_file = out_file.split(".")[0]
 
-    #input_file = file#"%s/%s_hag_nn.laz"  % (str(output_dir), out_file)
-    # print("-------------------------------------------")
-    # print(f"{file = }, {input_file = }, {output_dir = }, {out_file = }")
-
-    # print("-------------------------------------------")
-    # print("%s/%s_max.tif" % (str(output_dir), out_file))
-
-    #print("-------------------------------------------")
-    #print(f"{file = }, {str(output_dir) = }, {out_file = }")
-
     json = """
     [
         "%s",   
@@ -41,11 +31,7 @@ def worker(output_dir: Path, file: str):
 def rasterize(dir: Path, output_dir: Path, MAX_WORKERS: int):
 
     onlyfiles = [f for f in sorted(dir.glob('*.laz')) if f.is_file()]
-
-    #print(onlyfiles)
-
     func = partial(worker, output_dir)
-
 
     with Pool(MAX_WORKERS) as p:
         p.map(func, onlyfiles)
