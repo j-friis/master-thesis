@@ -9,7 +9,7 @@ module load cuda/11.3
 
 eval "$(conda shell.bash hook)"
 conda activate powerlines
-bash seg_sh/sb_train_denmank_pl_hough_20cm_ones.sh
+bash seg_sh/sb_train_denmank_pl_hough_10cm_ones.sh
 python -c "import MinkowskiEngine as ME; ME.print_diagnostics()"
 python -c "import torch; print('Cuda is available: ', torch.cuda.is_available())"
 python -c "import torch; print('Torch version: ',torch.__version__)"
