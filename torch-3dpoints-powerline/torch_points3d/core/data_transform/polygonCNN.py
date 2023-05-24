@@ -126,6 +126,21 @@ class PolygonCNN(object):
         indexes_needed = self.FilterPolygons(reg_polygons, multi_polygons, bbox_reg_polygon, bbox_multi_polygons, point_cloud, lines_image)
         new_las = self.Predictions(indexes_needed, point_cloud)
         return new_las
+    
+    def BBTouchingEdge(self, image_shape, bb, epsilon):
+        image_width, image_height = image_shape
+        left, top, width, height = bb[0], bb[1], bb[2], bb[3]
+        right = left + width
+        bottom = top + height
+        distance_to_left = left
+        distance_to_right = image_width - right
+        distance_to_top = top
+        distance_to_bottom = image_height - bottom
+
+        if distance_to_left > epsilon and distance_to_right > epsilon and distance_to_top > epsilon and distance_to_bottom > epsilon:
+            return False
+        else:
+            return True
 
     def ImageProcessing(self, filename):
         # Load Image
@@ -191,9 +206,11 @@ class PolygonCNN(object):
         lines_image = (lines_image * 255).astype(np.uint8)
         (_, label_ids, bounding_box, _) = cv2.connectedComponentsWithStats(lines_image)
         for i in range(len(bounding_box)):
-            area = bounding_box[i][cv2.CC_STAT_AREA]
-            if area < self.cc_area:
-                lines_image[label_ids == i] = 0
+            # Must be 10 Pixels from the edge of the image
+            if not self.BBTouchingEdge(image.shape, bounding_box[i], 10):
+                area = bounding_box[i][cv2.CC_STAT_AREA]
+                if area < self.cc_area:
+                    lines_image[label_ids == i] = 0
 
         return lines_image
     
