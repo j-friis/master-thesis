@@ -34,46 +34,12 @@ def worker(in_file: str):
 def cal_height(dir: Path, output_dir: Path, MAX_WORKERS: int):
 
     onlyfiles = [f for f in sorted(dir.glob('*.laz')) if f.is_file()]
-    #print(onlyfiles)
-    #onlyfiles = [join(dir, f) for f in onlyfiles]
 
-    # with Pool(MAX_WORKERS) as p:
-    #     p.map(worker, onlyfiles)
-
-    #     # results = tqdm(
-    #     #     p.imap_unordered(worker, onlyfiles),
-    #     #     total=len(onlyfiles),
-    #     # )  # 'total' is redundant here but can be useful
-    #     # when the size of the iterable is unobvious
-    #     #p.map(worker, onlyfiles)
-    #     # for result in results:
-    #     #     print(result)
+    with Pool(MAX_WORKERS) as p:
+        p.map(worker, onlyfiles)
         
-    #     p.close()
-    #     p.join()
-
-
-    for file in tqdm(onlyfiles):
-    #for file in onlyfiles:
-        file_name = file.name
-        out_file = file_name.split(".")[0]
-        input_file = dir.joinpath(file)#"%s/%s_hag_nn.laz"  % (str(output_dir), out_file)
-        json = """
-        [
-            "%s",
-            {
-                "type":"filters.hag_nn"
-            },
-            {
-                "type":"writers.las",
-                "filename":"%s/%s_hag_nn.laz",
-                "extra_dims":"HeightAboveGround=float32",
-                "compression":"laszip"
-            }
-        ]
-        """ % (input_file, str(output_dir), out_file)
-        pipeline = pdal.Pipeline(json)
-        count = pipeline.execute()
+    p.close()
+    p.join()
 
     return 
 

@@ -10,16 +10,6 @@ def worker(max_output_dir: Path, count_output_dir: Path, stdev_output_dir: Path,
     out_file = input_file.replace("_height_filtered",'')
     out_file = out_file.split(".")[0]
 
-    #input_file = file#"%s/%s_hag_nn.laz"  % (str(max_output_dir), out_file)
-    # print("-------------------------------------------")
-    # print(f"{file = }, {input_file = }, {max_output_dir = }, {out_file = }")
-
-    # print("-------------------------------------------")
-    # print("%s/%s_max.tif" % (str(max_output_dir), out_file))
-
-    #print("-------------------------------------------")
-    #print(f"{file = }, {str(max_output_dir) = }, {out_file = }")
-
     json = """
     [
         "%s",   
