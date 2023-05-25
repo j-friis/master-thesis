@@ -160,3 +160,4 @@ models/
 slurm_outs/
 *.png
 *.out
+*.pth
