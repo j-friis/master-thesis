@@ -8,23 +8,33 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run entire pipeline.')
     parser.add_argument('folder', type=str, help='Folder with files to run pipeline on')
     parser.add_argument('max_workers', type=int, help='The number of process used in Pool')
-    parser.add_argument('height_filter', type=int, help='The amount of meters above ground we remove')
+    parser.add_argument('height_filter', type=float, help='The amount of meters above ground we remove')
+    parser.add_argument('Resolution', type=str, help='The raster resolution')
+
 
     args = parser.parse_args()
     dir = args.folder
     MAX_WORKERS = args.max_workers
     height_filter = args.height_filter
+    resolution = args.Resolution
+
 
     height_dir_name = "LazFilesWithHeightParam"
     height_removed_dir_name = "LazFilesWithHeightRemoved"
-    raster_image_dir_name  = "ImagesGroundRemoved"
-
     height_dir = Path(f"{dir}/{height_dir_name}")
     height_removed_dir = Path(f"{dir}/{height_removed_dir_name}")
-    raster_image_dir = Path(f"{dir}/{raster_image_dir_name}")
+
+    if resolution == "1.0":
+        raster_image_dir_name  = "ImagesGroundRemoved"
+        raster_image_dir = Path(f"{dir}/{raster_image_dir_name}")
+        raster_image_dir.mkdir(exist_ok=True)
+    else:
+        raster_image_dir_name  = "ImagesGroundRemovedLarge"
+        raster_image_dir = Path(f"{dir}/{raster_image_dir_name}")
+        raster_image_dir.mkdir(exist_ok=True)
+
     dir = Path(f"{dir}")
 
-    
     raster_image_dir.mkdir(exist_ok=True)
     height_dir.mkdir(exist_ok=True)
     height_removed_dir.mkdir(exist_ok=True)
@@ -36,4 +46,4 @@ if __name__ == "__main__":
     filter_height(height_dir, height_removed_dir, MAX_WORKERS, height_filter)
     print("-------------------- Rasterize files ---------------------")
     laz_with_height_removed_dir = f"{dir}/LazFilesWithHeightRemoved"
-    rasterize(height_removed_dir, raster_image_dir, MAX_WORKERS)
+    rasterize(height_removed_dir, raster_image_dir, resolution, MAX_WORKERS)

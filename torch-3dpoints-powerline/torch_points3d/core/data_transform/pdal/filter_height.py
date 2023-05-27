@@ -19,7 +19,7 @@ def worker(output_dir: Path, height_filter: int, file: str):
 
 
 
-def filter_height(dir: Path, output_dir: Path, MAX_WORKERS: int, height_filter: int):
+def filter_height(dir: Path, output_dir: Path, MAX_WORKERS: int, height_filter: float):
 
     onlyfiles = [f for f in sorted(dir.glob('*.laz')) if f.is_file()]
     func = partial(worker, output_dir, height_filter)
@@ -34,7 +34,7 @@ def filter_height(dir: Path, output_dir: Path, MAX_WORKERS: int, height_filter: 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Filter the height in laz files.')
     parser.add_argument('folder', type=str, help='Folder with files to filter')
-    parser.add_argument('Height', type=float, help='Folder with files to filter')
+    parser.add_argument('Height', type=float, help='Meters from the bottom to filter out')
 
     args = parser.parse_args()
     dir = args.folder
@@ -43,7 +43,6 @@ if __name__ == "__main__":
     height_dir_name = "LazFilesWithHeightParam"
     height_dir = Path(f"{dir}/{height_dir_name}")
     height_dir.mkdir(exist_ok=True)
-
 
     height_removed_dir_name = "LazFilesWithHeightRemoved"
     height_removed_dir = Path(f"{dir}/{height_removed_dir_name}")
