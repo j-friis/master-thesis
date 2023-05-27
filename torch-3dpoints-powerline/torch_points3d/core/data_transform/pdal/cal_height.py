@@ -7,7 +7,6 @@ from pathlib import Path
 
 def worker(dir: Path, output_dir: Path, file: str):
     file_name = file.name
-    print(file_name)
     out_file = file_name.split(".")[0]
     input_file = dir.joinpath(file)
     

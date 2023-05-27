@@ -6,7 +6,6 @@ from functools import partial
 
 def worker(output_dir: Path, height_filter: int, file: str):
     file_name = file.name
-    print(file_name)
     out_filename = file_name.split(".")[0]
     out_filename = out_filename.replace("_hag_delaunay",'')
     out_filename = out_filename.replace("_hag_nn",'')
