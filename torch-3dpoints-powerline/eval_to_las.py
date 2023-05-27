@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 import glob
 import os
+from timeit import default_timer as timer
 
 ## import the tools
 from pathlib import Path
@@ -23,9 +24,6 @@ from torch_points3d.core.data_transform.features import AddOnes
 from torch_points3d.applications.pretrained_api import PretainedRegistry
 from torch_geometric.data import Batch
 
-PREDICT_VALUE = "test" # "test"
-
-
 def get_nearest_neighbors(src_points, candidates, k_neighbors=1):
     """Find nearest neighbors for all source points from a set of candidate points"""
     tree = KDTree(candidates, leaf_size=20, metric='euclidean')
@@ -42,23 +40,16 @@ def get_nearest_neighbors(src_points, candidates, k_neighbors=1):
     return closest
 
 
-def load_model(model_path: str, data_path: str):
+def load_model(model_path: str, data_path: str, model_weight: str, path_to_cnn):
     model = torch.load(model_path)
     model['run_config']['data']['dataroot'] = data_path
+    try:
+        model['run_config']['data']['path_to_model'] = path_to_cnn
+    except:
+        pass
     torch.save(model, model_path)
     print(model['run_config']["data"])
-    print(model['run_config']["data"]["train_transform"])
 
-    ## transformer for non ones
-    # pos_z = [ "pos_z" ]
-    # list_add_to_x = [ True ]
-    # delete_feats = [ True ]
-    # first_subsampling = model['run_config']["data"]["first_subsampling"]
-    # transform_test = Compose([MinPoints(512),
-    #                     XYZFeature(add_x=False, add_y=False, add_z= True),
-    #                     AddFeatsByKeys(list_add_to_x=list_add_to_x, feat_names= pos_z,delete_feats=delete_feats),
-    #                     GridSampling3D(mode='last', size=first_subsampling, quantize_coords=True)
-    #                     ])
 
     ## transformer for ones
     pos_z = [ "ones" ]
@@ -73,7 +64,7 @@ def load_model(model_path: str, data_path: str):
                      GridSampling3D(mode='last', size=first_subsampling, quantize_coords=True)
                      ])
     ### ['latest', 'loss_seg', 'acc', 'macc', 'miou']
-    model_pl = PretainedRegistry.from_file(model_path, weight_name="loss_seg").cuda()
+    model_pl = PretainedRegistry.from_file(model_path, weight_name=model_weight).cuda()
     return model_pl, transform_test, model['run_config']['data']
 
 
@@ -124,7 +115,7 @@ def predict(room_info, model, filename, transform_test, predict_folder):
 
 def add_predection_to_laz_files(filename, data_root_path, pred_data, processed_folder_name):
     ## read original las file
-    normal_laz_file = os.path.join(data_root_path, "raw", PREDICT_VALUE, filename+".laz")
+    normal_laz_file = os.path.join(data_root_path, "raw", "test", filename+".laz")
 
     non_processed_laz = laspy.read(normal_laz_file, laz_backend=laspy.compression.LazBackend.LazrsParallel)
     non_processed_point_data = np.stack([non_processed_laz.X, non_processed_laz.Y, non_processed_laz.Z], axis=0).transpose((1, 0))
@@ -144,7 +135,7 @@ def add_predection_to_laz_files(filename, data_root_path, pred_data, processed_f
     non_processed_laz.prediction = pred
 
     processed_data_root_path = os.path.join(data_root_path, processed_folder_name)
-    eval_folder = processed_data_root_path + "/eval" 
+    eval_folder = data_root_path + "/eval" 
     Path(eval_folder).mkdir(exist_ok=True, parents=True)
     eval_file_name = os.path.join(eval_folder, filename+".laz")
     
@@ -154,30 +145,39 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Eval entire folder.')
     parser.add_argument('folder', type=str, help='Folder with laz files to predict on')
     parser.add_argument('model', type=str, help='Path to the model')
+    parser.add_argument('model_metric', type=str, help='What metric to chose the model from options are latest, loss_seg, acc, macc and miou')
+    parser.add_argument('multi_view_model', type=str, help='The model that segments in 2D')
 
-    # args = parser.parse_args()
-    # data_path = args.folder
-    # model_path = args.model
+    args = parser.parse_args()
+    data_path = args.folder
+    model_path = args.model
+    model_metric = args.model_metric
+    multi_view_model = args.multi_view_model
 
-    data_path = "/home/jf/data"
-    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-18/12-08-50/SEUNet18.pt"
-    model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-02/16-01-32/SEUNet18.pt"
-    model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-02/11-26-09/SEUNet18.pt"
-    model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-07/13-32-19/SEUNet50.pt"
+    # data_path = "/home/jf/data"
+    # # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-18/12-08-50/SEUNet18.pt"
+    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-02/16-01-32/SEUNet18.pt"
+    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-02/11-26-09/SEUNet18.pt"
+    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-13/21-54-44/SEUNet18.pt"
+    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-13/10-49-02/SEUNet50.pt"
+    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-14/02-16-29/SEUNet50.pt"
+    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-13/21-54-44/SEUNet18.pt"
+    # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-22/20-40-06/SEUNet18.pt"
 
-
-    model, transform_test, config = load_model(model_path, data_path)
+    model, transform_test, config = load_model(model_path, data_path, model_metric, multi_view_model)
 
     ## load transform pt pre
     processed_folder_name = config["processed_folder"] 
     data_root_path = os.path.join(config['dataroot'] , "denmark")
     processed_data_root_path = os.path.join(data_root_path, processed_folder_name)
-    predict_folder_name = f"{PREDICT_VALUE}_0_({config['block_size_x']}, {config['block_size_y']})"
+    predict_folder_name = f"test_0_({config['block_size_x']}, {config['block_size_y']})"
     predict_folder = os.path.join(processed_data_root_path, predict_folder_name)
     pre_trans_path = os.path.join(predict_folder, "stats.pt")
     room_info = torch.load(pre_trans_path)
-    
+    start = timer()
     for filename in room_info['room_names']:
         print(f"Predecting on {filename}")
         pred_data = predict(room_info, model, filename, transform_test, predict_folder)
         add_predection_to_laz_files(filename, data_root_path, pred_data, processed_folder_name)
+    end = timer()
+    print(end - start)
