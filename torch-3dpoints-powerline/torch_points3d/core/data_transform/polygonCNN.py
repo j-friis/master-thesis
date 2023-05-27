@@ -1,18 +1,3 @@
-# import numpy as np
-# import laspy
-# import cv2
-
-# import torch
-# import torchvision.transforms as transforms
-# from torch_points3d.core.data_transform.DenmarkUNet.UNet import ConvUNet
-# # import rasterio
-# # from rasterio.features import shapes
-
-# import shapely
-# from shapely.geometry import Polygon, mapping
-# from matplotlib.path import Path as plt_path
-
-
 import shapely
 from shapely.geometry import Polygon, mapping
 import numpy as np
@@ -385,7 +370,7 @@ class PolygonCNN(object):
                     # Update the indexes
                     tmp_indexes_not_needed[final_indexes] = 1
 
-                    indexes_needed = indexes_needed | (tmp_indexes_needed & np.invert(tmp_indexes_not_needed))
+                indexes_needed = indexes_needed | (tmp_indexes_needed & np.invert(tmp_indexes_not_needed))
         return indexes_needed
     
     def Predictions(self, indexes_needed, point_cloud):
