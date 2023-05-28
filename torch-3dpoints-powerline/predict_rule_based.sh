@@ -46,6 +46,18 @@ while [[ "$#" -gt 0 ]]; do
             display_help  # Call the display_help function
             exit 0        # Exit the script successfully
             ;;
+        --h)
+            display_help  # Call the display_help function
+            exit 0        # Exit the script successfully
+            ;;
+        -help)
+            display_help  # Call the display_help function
+            exit 0        # Exit the script successfully
+            ;;
+        -h)
+            display_help  # Call the display_help function
+            exit 0        # Exit the script successfully
+            ;;
         *)
             echo "Invalid option: $1" >&2
             exit 1
