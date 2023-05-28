@@ -40,7 +40,7 @@ def get_nearest_neighbors(src_points, candidates, k_neighbors=1):
     return closest
 
 
-def load_model(model_path: str, data_path: str, model_weight: str, path_to_cnn):
+def load_model(model_path: str, data_path: str, model_weight: str, path_to_cnn: str):
     model = torch.load(model_path)
     model['run_config']['data']['dataroot'] = data_path
     try:
@@ -153,6 +153,10 @@ if __name__ == "__main__":
     model_path = args.model
     model_metric = args.model_metric
     multi_view_model = args.multi_view_model
+
+    data_path = data_path.replace('~',os.path.expanduser('~'))
+    model_path = model_path.replace('~',os.path.expanduser('~'))
+    multi_view_model = multi_view_model.replace('~',os.path.expanduser('~'))
 
     # data_path = "/home/jf/data"
     # # model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-04-18/12-08-50/SEUNet18.pt"

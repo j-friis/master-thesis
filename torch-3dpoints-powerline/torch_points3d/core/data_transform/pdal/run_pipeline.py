@@ -1,4 +1,5 @@
 import argparse
+import os
 from filter_height import filter_height
 from raster import rasterize
 from cal_height import cal_height
@@ -14,6 +15,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     dir = args.folder
+    dir = dir.replace('~',os.path.expanduser('~'))
+     
     MAX_WORKERS = args.max_workers
     height_filter = args.height_filter
     resolution = args.Resolution
