@@ -193,7 +193,7 @@ class PolygonCNN(object):
         (_, label_ids, bounding_box, _) = cv2.connectedComponentsWithStats(lines_image)
         for i in range(len(bounding_box)):
             # Must be 10 Pixels from the edge of the image
-            if not self.BBTouchingEdge(image.shape, bounding_box[i], 10):
+            if not self.BBTouchingEdge(lines_image.shape, bounding_box[i], 10):
                 area = bounding_box[i][cv2.CC_STAT_AREA]
                 if area < self.cc_area:
                     lines_image[label_ids == i] = 0
