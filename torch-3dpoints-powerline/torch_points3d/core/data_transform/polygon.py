@@ -20,6 +20,7 @@ class HoughLinePre(object):
         self.min_line_length = min_line_length
         self.meters_around_line = meters_around_line
         self.cc_area = cc_area
+        self.move_in = 0.01
         self.simplify_tolerance = simplify_tolerance
         self.small_dialation_kernel = small_dialation_kernel
 
@@ -196,11 +197,14 @@ class HoughLinePre(object):
         x_values = self.CastAllXValuesToImage(point_cloud.X, x_pixels)
         y_values = self.CastAllYValuesToImage(point_cloud.Y, y_pixels)
 
-        x_values = np.where(x_values < x_pixels, x_values, x_pixels)
-        x_values = np.where(x_values >= 0, x_values, 0)
+        # As there are some problems with pixels around the edges after we have simplified
+        # we need to move the some of the points into the image again 
+        x_values = np.where(x_values <= (x_pixels-1)-self.move_in, x_values, (x_pixels-1)-self.move_in)
+        x_values = np.where(x_values >= self.move_in, x_values, self.move_in)
         
-        y_values = np.where(y_values < y_pixels, y_values, y_pixels)
-        y_values = np.where(y_values >= 0, y_values, 0)
+        y_values = np.where(y_values <= (y_pixels-1)-self.move_in, y_values, (y_pixels-1)-self.move_in)
+        y_values = np.where(y_values >= self.move_in, y_values, self.move_in)
+
 
         # Format: [(1,1), (3,5), (1,5), ...] with 30 mio samples
         list_zipped = np.array(list(zip(x_values, y_values)))
