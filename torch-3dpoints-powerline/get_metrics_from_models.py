@@ -41,9 +41,15 @@ def get_nearest_neighbors(src_points, candidates, k_neighbors=1):
     return closest
 
 
-def load_model(model_path: str, data_path: str):
+def load_model(model_path: str, data_path: str, path_to_cnn: str):
     model = torch.load(model_path)
     model['run_config']['data']['dataroot'] = data_path
+    model['run_config']['data']['dataroot'] = data_path
+    try:
+        model['run_config']['data']['path_to_model'] = path_to_cnn
+    except:
+        pass
+    torch.save(model, model_path)
     torch.save(model, model_path)
     print(model['run_config']["data"])
     print(model['run_config']["data"]["train_transform"])
@@ -143,7 +149,7 @@ def get_metrics(pred_data, model_las, whole_las):
 
     model_las_metric_dict["acc"] = 100 * cfm.get_overall_accuracy()
     model_las_metric_dict["macc"] = 100 * cfm.get_mean_class_accuracy()
-    model_las_metric_dict["miou"] = 100 * cfm.get_overall_accuracy()
+    model_las_metric_dict["miou"] = 100 * cfm.get_average_intersection_union()
     model_las_metric_dict["miou_class"] = {
         i: "{:.2f}".format(100 * v)
         for i, v in enumerate(cfm.get_intersection_union_per_class()[0])
@@ -168,7 +174,7 @@ def get_metrics(pred_data, model_las, whole_las):
 
     whole_las_metric_dict["acc"] = 100 * cfm.get_overall_accuracy()
     whole_las_metric_dict["macc"] = 100 * cfm.get_mean_class_accuracy()
-    whole_las_metric_dict["miou"] = 100 * cfm.get_overall_accuracy()
+    whole_las_metric_dict["miou"] = 100 * cfm.get_average_intersection_union()
     whole_las_metric_dict["miou_class"] = {
         i: "{:.2f}".format(100 * v)
         for i, v in enumerate(cfm.get_intersection_union_per_class()[0])
@@ -190,7 +196,13 @@ if __name__ == "__main__":
     raw_data_path = "/home/jf/data/denmark/raw/"
     model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-11/15-51-44/SEUNet50.pt"
     model_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/outputs/2023-05-07/13-32-19/SEUNet50.pt"
-
+    
+    data_path = "/home/jf/data"
+    raw_data_path = "/home/jf/data/denmark/raw/"
+    root_path = "/home/jf/Documents/msc/torch-3dpoints-powerline/"
+    model_folder = "2023-05-25/23-26-39/"
+    model_name = "SEUNet18.pt"
+    model_path = root_path+ "outputs/" + model_folder + model_name
 
     model, transform_test, config = load_model(model_path, data_path)
 
@@ -199,22 +211,10 @@ if __name__ == "__main__":
     data_root_path = os.path.join(config['dataroot'] , "denmark")
     processed_data_root_path = os.path.join(data_root_path, processed_folder_name)
 
-
-    # total_points = 0
-    # total_pl_points = 0
-    # amount_of_files = 0
-    # dirs = list(glob.glob(data_path+"*"))
-    # for dir in dirs:
-    #     files = list(glob.glob(dir+"/*.l*"))
-    #     for file in files:
-    #         data = laspy.read(file, laz_backend=laspy.compression.LazBackend.LazrsParallel)
-    #         label_data = data[data.classification == 14]
-
-
-    splits = ["train", "val", "test"]
-
-    metric_dict = {}
-    for split in splits:
+    splits = ["test", "val", "test"]
+    split_dict = {}
+    for split in splits[:1]:
+        metric_dict = {}
         if split == "train":
             overlap = config["train_overlap"]
         if split == "val":
@@ -226,19 +226,21 @@ if __name__ == "__main__":
         pre_trans_path = os.path.join(predict_folder, "stats.pt")
         room_info = torch.load(pre_trans_path)
         
-        files = room_info['room_names'][:1]
+        files = room_info['room_names']
         for filename in files:
             print(f"Predecting on {filename}")
             #the unprocessed file
             raw_file_path = os.path.join(raw_data_path,split,filename+".laz")
             raw_file = laspy.read(raw_file_path, laz_backend=laspy.compression.LazBackend.LazrsParallel)
             #the file that the models sees
-            model_file_path = os.path.join(raw_data_path,split,"NewLaz",filename+".laz")
+            model_file_path = os.path.join(raw_data_path,split,"CNNLaz",filename+".laz")
             model_file = laspy.read(model_file_path, laz_backend=laspy.compression.LazBackend.LazrsParallel)
 
             pred_data = predict(room_info, model, filename, transform_test, predict_folder)
             model_las_metric_dict, whole_las_metric_dict = get_metrics(pred_data, model_file,raw_file)
             metric_dict[filename] = {"model":model_las_metric_dict, "whole":whole_las_metric_dict}
+    
+    split_dict[split] = metric_dict
     
     print(json.dumps(metric_dict,sort_keys=True, indent=4))
 
